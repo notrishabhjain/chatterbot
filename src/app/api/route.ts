@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
-import { Configuration, OpenAIApi } from 'openai';
+import OpenAI  from 'openai';
 
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.NEXT_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true
 });
-
-const openai = new OpenAIApi(configuration);
 
 export async function POST(req: Request, res: NextResponse) {
   const body = await req.json()
 
-  const completion = await openai.createChatCompletion({
+  const completion = await openai.chat.completions.create({
     model: "gpt-3.5-turbo",
     messages: body.messages,
   });
-  console.log(completion.data.choices[0].message);
-  const theResponse = completion.data.choices[0].message;
+  console.log(completion.choices[0].message);
+  const theResponse = completion.choices[0].message;
 
   return NextResponse.json({ output: theResponse }, { status: 200 })
 
