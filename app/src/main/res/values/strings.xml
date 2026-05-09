@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TaskFlow</string>
+
+    <!-- Main Activity -->
+    <string name="task_list_title">Your Tasks</string>
+    <string name="empty_state_message">No pending tasks - great job!</string>
+    <string name="mark_complete">Mark Complete</string>
+
+    <!-- Priority Labels -->
+    <string name="priority_high">High</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_low">Low</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="notification_sources_header">Notification Sources</string>
+    <string name="notification_sources_note">Toggle which apps can create tasks</string>
+    <string name="reminder_intervals_header">Reminder Intervals</string>
+    <string name="high_priority_interval">High Priority</string>
+    <string name="medium_priority_interval">Medium Priority</string>
+    <string name="low_priority_interval">Low Priority</string>
+
+    <!-- Permissions -->
+    <string name="notification_permission_title">Notification Access Required</string>
+    <string name="notification_permission_message">TaskFlow needs notification access to automatically create tasks from your app notifications. Please enable it in Settings.</string>
+    <string name="enable">Enable</string>
+    <string name="cancel">Cancel</string>
+    <string name="post_notification_rationale">TaskFlow needs permission to show reminder notifications for your tasks.</string>
+
+    <!-- Reminder Intervals -->
+    <string name="interval_15_min">15 minutes</string>
+    <string name="interval_30_min">30 minutes</string>
+    <string name="interval_1_hour">1 hour</string>
+    <string name="interval_2_hours">2 hours</string>
+    <string name="interval_4_hours">4 hours</string>
+
+    <!-- General -->
+    <string name="source_label">From: %s</string>
+    <string name="due_label">Due: %s</string>
+</resources>
