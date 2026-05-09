@@ -1,34 +1,73 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# TaskFlow - Intelligent Task Automation
 
-## Getting Started
+TaskFlow is a native Android application that automatically captures actionable tasks from your notifications and organizes them into a smart to-do list with reminders.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
+- **Notification Capture** - Automatically detects task-like messages from notifications using keyword matching
+- **Smart Task Management** - Organize, prioritize, and complete tasks from a clean Material Design interface
+- **Reminders** - Set exact alarms to remind you about upcoming tasks
+- **Boot Persistence** - Reminders survive device restarts
+- **Configurable Settings** - Choose which apps to monitor, customize notification keywords, and more
+
+## Tech Stack
+
+- **Language:** Java
+- **Min SDK:** 26 (Android 8.0 Oreo)
+- **Target SDK:** 34 (Android 14)
+- **Database:** Room (SQLite abstraction)
+- **UI:** Material Components, RecyclerView, ConstraintLayout, CardView
+- **Architecture:** Activity-based with Room for persistence
+
+## Project Structure
+
+```
+app/src/main/java/com/taskflow/automate/
+    model/       - Data models (Task entity)
+    database/    - Room database, DAO, and type converters
+    service/     - NotificationListenerService implementation
+    receiver/    - BroadcastReceivers (reminders, boot, task completion)
+    ui/          - Activities and adapters
+    util/        - Utility/helper classes
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Setup Instructions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. **Clone the repository**
+   ```
+   git clone <repository-url>
+   ```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+2. **Open in Android Studio**
+   - Open Android Studio
+   - Select "Open an existing project"
+   - Navigate to the cloned directory and select it
+   - Wait for Gradle sync to complete
 
-## Learn More
+3. **Build and Run**
+   - Connect an Android device or start an emulator (API 26+)
+   - Click "Run" or press Shift+F10
 
-To learn more about Next.js, take a look at the following resources:
+4. **Grant Permissions**
+   - On first launch, the app will guide you to enable Notification Access in system settings
+   - Grant notification permission when prompted (Android 13+)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Permissions
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+| Permission | Purpose |
+|-----------|---------|
+| `BIND_NOTIFICATION_LISTENER_SERVICE` | Read incoming notifications to detect tasks |
+| `RECEIVE_BOOT_COMPLETED` | Reschedule reminders after device restart |
+| `SCHEDULE_EXACT_ALARM` | Set precise reminder alarms |
+| `POST_NOTIFICATIONS` | Show reminder notifications (Android 13+) |
 
-## Deploy on Vercel
+## Building
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The project uses Gradle with the Android Gradle Plugin 8.2.0. Ensure you have:
+- Android Studio Hedgehog (2023.1.1) or later
+- JDK 17
+- Android SDK with API level 34 installed
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+## License
+
+This project is for demonstration and educational purposes.
