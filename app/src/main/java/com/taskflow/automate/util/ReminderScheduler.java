@@ -4,10 +4,6 @@ import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.os.Build;
-
-import androidx.preference.PreferenceManager;
 
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.receiver.ReminderReceiver;
@@ -51,29 +47,9 @@ public class ReminderScheduler {
     }
 
     private static long getReminderInterval(Context context, int priority) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-
-        // Allow override from preferences
-        String key;
-        long defaultInterval;
-
-        switch (priority) {
-            case 1:
-                key = "reminder_interval_high";
-                defaultInterval = HIGH_PRIORITY_INTERVAL;
-                break;
-            case 2:
-                key = "reminder_interval_medium";
-                defaultInterval = MEDIUM_PRIORITY_INTERVAL;
-                break;
-            case 3:
-            default:
-                key = "reminder_interval_low";
-                defaultInterval = LOW_PRIORITY_INTERVAL;
-                break;
-        }
-
-        return prefs.getLong(key, defaultInterval);
+        PreferenceManager prefManager = new PreferenceManager(context);
+        int minutes = prefManager.getReminderInterval(priority);
+        return minutes * 60 * 1000L;
     }
 
     private static PendingIntent createPendingIntent(Context context, long taskId) {

@@ -1,22 +1,19 @@
 package com.taskflow.automate.service;
 
 import android.app.Notification;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
-import androidx.preference.PreferenceManager;
-
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
 import com.taskflow.automate.model.Task;
+import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
 import com.taskflow.automate.util.TaskExtractor;
 
-import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,6 +24,7 @@ public class NotificationCaptureService extends NotificationListenerService {
 
     private TaskExtractor taskExtractor;
     private PriorityAssigner priorityAssigner;
+    private PreferenceManager preferenceManager;
     private ExecutorService executorService;
 
     @Override
@@ -34,6 +32,7 @@ public class NotificationCaptureService extends NotificationListenerService {
         super.onCreate();
         taskExtractor = new TaskExtractor();
         priorityAssigner = new PriorityAssigner();
+        preferenceManager = new PreferenceManager(this);
         executorService = Executors.newSingleThreadExecutor();
     }
 
@@ -95,8 +94,7 @@ public class NotificationCaptureService extends NotificationListenerService {
     }
 
     private boolean isAppBlocked(String packageName) {
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        Set<String> blockedApps = prefs.getStringSet("blocked_apps", new HashSet<>());
+        Set<String> blockedApps = preferenceManager.getBlockedApps();
         return blockedApps.contains(packageName);
     }
 
@@ -104,6 +102,9 @@ public class NotificationCaptureService extends NotificationListenerService {
                                        String packageName, String notificationKey) {
         executorService.execute(() -> {
             try {
+                // Track this app as a known notification source
+                preferenceManager.addKnownApp(packageName);
+
                 Task task = new Task();
                 task.setTitle(result.taskTitle);
                 task.setDescription(result.taskDescription);
