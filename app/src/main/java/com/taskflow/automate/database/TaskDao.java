@@ -32,4 +32,10 @@ public interface TaskDao {
 
     @Query("DELETE FROM tasks WHERE status = 'completed'")
     void deleteCompletedTasks();
+
+    @Query("SELECT * FROM tasks WHERE notification_key = :key AND status = 'pending' LIMIT 1")
+    Task getTaskByNotificationKey(String key);
+
+    @Query("UPDATE tasks SET reminder_count = reminder_count + 1 WHERE id = :id")
+    void incrementReminderCount(long id);
 }

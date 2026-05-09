@@ -34,6 +34,9 @@ public class Task {
     @ColumnInfo(name = "notification_key")
     private String notificationKey;
 
+    @ColumnInfo(name = "reminder_count", defaultValue = "0")
+    private int reminderCount;
+
     public Task() {
     }
 
@@ -74,6 +77,10 @@ public class Task {
         return notificationKey;
     }
 
+    public int getReminderCount() {
+        return reminderCount;
+    }
+
     // Setters
     public void setId(long id) {
         this.id = id;
@@ -109,6 +116,10 @@ public class Task {
 
     public void setNotificationKey(String notificationKey) {
         this.notificationKey = notificationKey;
+    }
+
+    public void setReminderCount(int reminderCount) {
+        this.reminderCount = reminderCount;
     }
 
     // Helper method

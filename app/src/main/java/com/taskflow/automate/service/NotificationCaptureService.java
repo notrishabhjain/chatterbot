@@ -52,6 +52,11 @@ public class NotificationCaptureService extends NotificationListenerService {
 
         String packageName = sbn.getPackageName();
 
+        // Skip our own notifications to prevent self-capture feedback loop
+        if ("com.taskflow.automate".equals(packageName)) {
+            return;
+        }
+
         // Skip if app is in the blocked list
         if (isAppBlocked(packageName)) {
             return;
@@ -102,6 +107,16 @@ public class NotificationCaptureService extends NotificationListenerService {
                                        String packageName, String notificationKey) {
         executorService.execute(() -> {
             try {
+                TaskDao taskDao = AppDatabase.getInstance(getApplicationContext()).taskDao();
+
+                // Skip duplicate tasks with the same notification key
+                if (notificationKey != null) {
+                    Task existing = taskDao.getTaskByNotificationKey(notificationKey);
+                    if (existing != null) {
+                        return;
+                    }
+                }
+
                 // Track this app as a known notification source
                 preferenceManager.addKnownApp(packageName);
 
@@ -120,7 +135,6 @@ public class NotificationCaptureService extends NotificationListenerService {
                 task.setPriority(priority);
 
                 // Insert into database
-                TaskDao taskDao = AppDatabase.getInstance(getApplicationContext()).taskDao();
                 long taskId = taskDao.insertTask(task);
                 task.setId(taskId);
 

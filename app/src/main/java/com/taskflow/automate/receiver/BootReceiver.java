@@ -3,6 +3,7 @@ package com.taskflow.automate.receiver;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
@@ -15,11 +16,15 @@ import java.util.concurrent.Executors;
 
 public class BootReceiver extends BroadcastReceiver {
 
+    private static final String TAG = "BootReceiver";
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent == null || !Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
             return;
         }
+
+        final PendingResult pendingResult = goAsync();
 
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
@@ -31,7 +36,9 @@ public class BootReceiver extends BroadcastReceiver {
                     ReminderScheduler.scheduleReminder(context, task);
                 }
             } catch (Exception e) {
-                // Silently handle errors during boot rescheduling
+                Log.e(TAG, "Error rescheduling reminders on boot", e);
+            } finally {
+                pendingResult.finish();
             }
         });
         executor.shutdown();

@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -20,9 +21,14 @@ import java.util.concurrent.Executors;
 
 public class ReminderReceiver extends BroadcastReceiver {
 
+    private static final String TAG = "ReminderReceiver";
     private static final String CHANNEL_ID = "task_reminders";
     private static final String CHANNEL_NAME = "Task Reminders";
     private static final String EXTRA_TASK_ID = "extra_task_id";
+
+    private static final int MAX_REMINDERS_HIGH = 20;
+    private static final int MAX_REMINDERS_MEDIUM = 15;
+    private static final int MAX_REMINDERS_LOW = 10;
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -41,6 +47,15 @@ public class ReminderReceiver extends BroadcastReceiver {
                     return;
                 }
 
+                // Check if maximum reminder count has been reached
+                int maxReminders = getMaxReminders(task.getPriority());
+                if (task.getReminderCount() >= maxReminders) {
+                    return;
+                }
+
+                // Increment reminder count
+                taskDao.incrementReminderCount(taskId);
+
                 // Create notification channel
                 createNotificationChannel(context);
 
@@ -50,10 +65,23 @@ public class ReminderReceiver extends BroadcastReceiver {
                 // Reschedule for next reminder
                 ReminderScheduler.scheduleReminder(context, task);
             } catch (Exception e) {
-                // Silently handle database errors
+                Log.e(TAG, "Error processing reminder for task " + taskId, e);
             }
         });
         executor.shutdown();
+    }
+
+    private int getMaxReminders(int priority) {
+        switch (priority) {
+            case 1:
+                return MAX_REMINDERS_HIGH;
+            case 2:
+                return MAX_REMINDERS_MEDIUM;
+            case 3:
+                return MAX_REMINDERS_LOW;
+            default:
+                return MAX_REMINDERS_LOW;
+        }
     }
 
     private void createNotificationChannel(Context context) {

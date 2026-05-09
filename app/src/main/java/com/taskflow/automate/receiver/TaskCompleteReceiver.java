@@ -4,6 +4,7 @@ import android.app.NotificationManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.util.Log;
 
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
@@ -14,6 +15,7 @@ import java.util.concurrent.Executors;
 
 public class TaskCompleteReceiver extends BroadcastReceiver {
 
+    private static final String TAG = "TaskCompleteReceiver";
     private static final String EXTRA_TASK_ID = "extra_task_id";
 
     @Override
@@ -40,7 +42,7 @@ public class TaskCompleteReceiver extends BroadcastReceiver {
                     notificationManager.cancel((int) taskId);
                 }
             } catch (Exception e) {
-                // Silently handle errors
+                Log.e(TAG, "Error completing task " + taskId, e);
             }
         });
         executor.shutdown();
