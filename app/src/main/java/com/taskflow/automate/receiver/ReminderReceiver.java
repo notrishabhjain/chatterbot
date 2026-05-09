@@ -37,6 +37,8 @@ public class ReminderReceiver extends BroadcastReceiver {
             return;
         }
 
+        final PendingResult pendingResult = goAsync();
+
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
             try {
@@ -53,19 +55,21 @@ public class ReminderReceiver extends BroadcastReceiver {
                     return;
                 }
 
-                // Increment reminder count
-                taskDao.incrementReminderCount(taskId);
-
                 // Create notification channel
                 createNotificationChannel(context);
 
                 // Build and show notification
                 showReminderNotification(context, task);
 
+                // Increment reminder count after notification succeeds
+                taskDao.incrementReminderCount(taskId);
+
                 // Reschedule for next reminder
                 ReminderScheduler.scheduleReminder(context, task);
             } catch (Exception e) {
                 Log.e(TAG, "Error processing reminder for task " + taskId, e);
+            } finally {
+                pendingResult.finish();
             }
         });
         executor.shutdown();
