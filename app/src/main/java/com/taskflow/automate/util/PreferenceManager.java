@@ -17,6 +17,12 @@ public class PreferenceManager {
     private static final String KEY_REMINDER_INTERVAL_HIGH = "reminder_interval_high";
     private static final String KEY_REMINDER_INTERVAL_MEDIUM = "reminder_interval_medium";
     private static final String KEY_REMINDER_INTERVAL_LOW = "reminder_interval_low";
+    private static final String KEY_SMTP_HOST = "smtp_host";
+    private static final String KEY_SMTP_PORT = "smtp_port";
+    private static final String KEY_EMAIL_USERNAME = "email_username";
+    private static final String KEY_EMAIL_PASSWORD = "email_password";
+    private static final String KEY_EMAIL_RECIPIENT = "email_recipient";
+    private static final String KEY_EMAIL_FREQUENCY = "email_frequency";
 
     private static final int DEFAULT_HIGH_INTERVAL = 30;
     private static final int DEFAULT_MEDIUM_INTERVAL = 60;
@@ -89,5 +95,54 @@ public class PreferenceManager {
 
     public void setFirstLaunchDone() {
         prefs.edit().putBoolean(KEY_FIRST_LAUNCH, false).apply();
+    }
+
+    // Email Digest Config
+    public String getSmtpHost() {
+        return prefs.getString(KEY_SMTP_HOST, null);
+    }
+
+    public void setSmtpHost(String host) {
+        prefs.edit().putString(KEY_SMTP_HOST, host).apply();
+    }
+
+    public String getSmtpPort() {
+        return prefs.getString(KEY_SMTP_PORT, "587");
+    }
+
+    public void setSmtpPort(String port) {
+        prefs.edit().putString(KEY_SMTP_PORT, port).apply();
+    }
+
+    public String getEmailUsername() {
+        return prefs.getString(KEY_EMAIL_USERNAME, null);
+    }
+
+    public void setEmailUsername(String username) {
+        prefs.edit().putString(KEY_EMAIL_USERNAME, username).apply();
+    }
+
+    public String getEmailPassword() {
+        return prefs.getString(KEY_EMAIL_PASSWORD, null);
+    }
+
+    public void setEmailPassword(String password) {
+        prefs.edit().putString(KEY_EMAIL_PASSWORD, password).apply();
+    }
+
+    public String getEmailRecipient() {
+        return prefs.getString(KEY_EMAIL_RECIPIENT, null);
+    }
+
+    public void setEmailRecipient(String recipient) {
+        prefs.edit().putString(KEY_EMAIL_RECIPIENT, recipient).apply();
+    }
+
+    public String getEmailFrequency() {
+        return prefs.getString(KEY_EMAIL_FREQUENCY, "daily");
+    }
+
+    public void setEmailFrequency(String frequency) {
+        prefs.edit().putString(KEY_EMAIL_FREQUENCY, frequency).apply();
     }
 }

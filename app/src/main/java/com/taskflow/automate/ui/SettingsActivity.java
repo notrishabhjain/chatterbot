@@ -1,5 +1,6 @@
 package com.taskflow.automate.ui;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -13,6 +14,7 @@ import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.card.MaterialCardView;
 import com.taskflow.automate.R;
 import com.taskflow.automate.util.PreferenceManager;
 
@@ -46,6 +48,7 @@ public class SettingsActivity extends AppCompatActivity {
         setupThemeMode();
         setupAppToggles();
         setupReminderIntervals();
+        setupEmailDigest();
     }
 
     private void setupToolbar() {
@@ -209,6 +212,15 @@ public class SettingsActivity extends AppCompatActivity {
         @Override
         public void onNothingSelected(AdapterView<?> parent) {
             // No action needed
+        }
+    }
+
+    private void setupEmailDigest() {
+        MaterialCardView cardEmailDigest = findViewById(R.id.card_email_digest_settings);
+        if (cardEmailDigest != null) {
+            cardEmailDigest.setOnClickListener(v -> {
+                startActivity(new Intent(this, EmailConfigActivity.class));
+            });
         }
     }
 }

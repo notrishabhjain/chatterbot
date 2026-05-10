@@ -35,6 +35,7 @@ import com.taskflow.automate.model.Task;
 import com.taskflow.automate.ui.SwipeCallback;
 import com.taskflow.automate.ui.TaskAdapter;
 import com.taskflow.automate.ui.TaskEditActivity;
+import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
 
 import java.text.SimpleDateFormat;
@@ -261,6 +262,13 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         AppDatabase.getInstance(requireContext())
                                 .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
                         ReminderScheduler.cancelReminder(requireContext(), task.getId());
+
+                        // Handle recurring tasks
+                        RecurringTaskManager recurringManager = new RecurringTaskManager();
+                        Task nextTask = recurringManager.createNextRecurrence(task);
+                        if (nextTask != null) {
+                            AppDatabase.getInstance(requireContext()).taskDao().insertTask(nextTask);
+                        }
                     });
                 }
             }
@@ -291,6 +299,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         TextInputEditText editTitle = dialogView.findViewById(R.id.edit_task_title);
         TextInputEditText editDescription = dialogView.findViewById(R.id.edit_task_description);
         Spinner spinnerPriority = dialogView.findViewById(R.id.spinner_priority);
+        Spinner spinnerRecurrence = dialogView.findViewById(R.id.spinner_recurrence);
         MaterialButton btnPickDate = dialogView.findViewById(R.id.btn_pick_date);
 
         String[] priorities = {
@@ -303,6 +312,17 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         priorityAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerPriority.setAdapter(priorityAdapter);
         spinnerPriority.setSelection(1); // Default to Medium
+
+        String[] recurrenceOptions = {
+                getString(R.string.recurrence_none),
+                getString(R.string.recurrence_daily),
+                getString(R.string.recurrence_weekly),
+                getString(R.string.recurrence_monthly)
+        };
+        ArrayAdapter<String> recurrenceAdapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_item, recurrenceOptions);
+        recurrenceAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerRecurrence.setAdapter(recurrenceAdapter);
 
         final Long[] selectedDueDate = {null};
         final SimpleDateFormat dateFormatDisplay = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
@@ -347,6 +367,14 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                     task.setCreatedAt(System.currentTimeMillis());
                     task.setDueDate(selectedDueDate[0]);
                     task.setSourceApp("Manual");
+
+                    // Set recurrence
+                    int recurrenceIndex = spinnerRecurrence.getSelectedItemPosition();
+                    String[] recurrenceValues = {null, "DAILY", "WEEKLY", "MONTHLY"};
+                    task.setRecurrenceRule(recurrenceValues[recurrenceIndex]);
+                    if (recurrenceIndex > 0) {
+                        task.setRecurrenceInterval(1);
+                    }
 
                     executor.execute(() -> {
                         long id = AppDatabase.getInstance(requireContext()).taskDao().insertTask(task);

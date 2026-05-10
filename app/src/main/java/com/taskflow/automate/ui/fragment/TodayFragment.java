@@ -22,6 +22,7 @@ import com.taskflow.automate.model.Task;
 import com.taskflow.automate.ui.SwipeCallback;
 import com.taskflow.automate.ui.TaskAdapter;
 import com.taskflow.automate.ui.TaskEditActivity;
+import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
 
 import java.util.ArrayList;
@@ -35,6 +36,11 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
 
     private RecyclerView recyclerToday;
     private TextView textEmptyToday;
+    private TextView textStatPending;
+    private TextView textStatHighPriority;
+    private TextView textStatDueToday;
+    private TextView textStatOverdue;
+    private TextView textStatCompletedWeek;
     private TaskAdapter taskAdapter;
     private List<Task> taskList;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -56,6 +62,13 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
         recyclerToday = view.findViewById(R.id.recycler_today);
         textEmptyToday = view.findViewById(R.id.text_empty_today);
 
+        // Stats views
+        textStatPending = view.findViewById(R.id.text_stat_pending);
+        textStatHighPriority = view.findViewById(R.id.text_stat_high_priority);
+        textStatDueToday = view.findViewById(R.id.text_stat_due_today);
+        textStatOverdue = view.findViewById(R.id.text_stat_overdue);
+        textStatCompletedWeek = view.findViewById(R.id.text_stat_completed_week);
+
         taskList = new ArrayList<>();
         taskAdapter = new TaskAdapter(taskList, this);
         taskAdapter.setOnTaskClickListener(this);
@@ -72,12 +85,60 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
     public void onResume() {
         super.onResume();
         loadTasks();
+        loadStats();
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         executor.shutdown();
+    }
+
+    private void loadStats() {
+        executor.execute(() -> {
+            int pendingCount = AppDatabase.getInstance(requireContext())
+                    .taskDao().getTaskCountByStatus("pending");
+            int highPriorityCount = AppDatabase.getInstance(requireContext())
+                    .taskDao().getHighPriorityPendingCount();
+
+            Calendar cal = Calendar.getInstance();
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            long startOfDay = cal.getTimeInMillis();
+            cal.set(Calendar.HOUR_OF_DAY, 23);
+            cal.set(Calendar.MINUTE, 59);
+            cal.set(Calendar.SECOND, 59);
+            long endOfDay = cal.getTimeInMillis();
+
+            int dueTodayCount = AppDatabase.getInstance(requireContext())
+                    .taskDao().getDueTodayCount(startOfDay, endOfDay);
+            int overdueCount = AppDatabase.getInstance(requireContext())
+                    .taskDao().getOverdueCount(System.currentTimeMillis());
+
+            // Week stats
+            cal = Calendar.getInstance();
+            cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
+            cal.set(Calendar.HOUR_OF_DAY, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            long weekStart = cal.getTimeInMillis();
+            long weekEnd = System.currentTimeMillis();
+            int completedThisWeek = AppDatabase.getInstance(requireContext())
+                    .taskDao().getCompletedThisWeekCount(weekStart, weekEnd);
+
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    textStatPending.setText(String.valueOf(pendingCount));
+                    textStatHighPriority.setText(String.valueOf(highPriorityCount));
+                    textStatDueToday.setText(String.valueOf(dueTodayCount));
+                    textStatOverdue.setText(String.valueOf(overdueCount));
+                    textStatCompletedWeek.setText(getString(R.string.stat_completed_this_week, completedThisWeek));
+                });
+            }
+        });
     }
 
     private void loadTasks() {
@@ -172,6 +233,13 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         AppDatabase.getInstance(requireContext())
                                 .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
                         ReminderScheduler.cancelReminder(requireContext(), task.getId());
+
+                        // Handle recurring tasks
+                        RecurringTaskManager recurringManager = new RecurringTaskManager();
+                        Task nextTask = recurringManager.createNextRecurrence(task);
+                        if (nextTask != null) {
+                            AppDatabase.getInstance(requireContext()).taskDao().insertTask(nextTask);
+                        }
                     });
                 }
             }

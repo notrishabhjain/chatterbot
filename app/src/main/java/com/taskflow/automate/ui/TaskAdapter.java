@@ -3,6 +3,7 @@ package com.taskflow.automate.ui;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.provider.CalendarContract;
 import android.view.LayoutInflater;
@@ -16,13 +17,19 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.taskflow.automate.R;
+import com.taskflow.automate.model.Tag;
 import com.taskflow.automate.model.Task;
 
 import java.text.SimpleDateFormat;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
 
@@ -38,6 +45,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     private final OnTaskCompleteListener completeListener;
     private OnTaskClickListener clickListener;
     private final SimpleDateFormat dateFormat;
+    private Map<Long, List<Tag>> tagMap = new HashMap<>();
 
     public TaskAdapter(List<Task> tasks, OnTaskCompleteListener listener) {
         this.tasks = tasks;
@@ -47,6 +55,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     public void setOnTaskClickListener(OnTaskClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void setTagMap(Map<Long, List<Tag>> tagMap) {
+        this.tagMap = tagMap;
     }
 
     @NonNull
@@ -105,6 +117,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         private final TextView textDueDate;
         private final MaterialButton btnMarkComplete;
         private final ImageButton btnAddCalendar;
+        private final ChipGroup chipGroupTaskTags;
 
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -115,6 +128,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             textDueDate = itemView.findViewById(R.id.text_due_date);
             btnMarkComplete = itemView.findViewById(R.id.btn_mark_complete);
             btnAddCalendar = itemView.findViewById(R.id.btn_add_calendar);
+            chipGroupTaskTags = itemView.findViewById(R.id.chip_group_task_tags);
         }
 
         void bind(Task task, int position) {
@@ -150,6 +164,32 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                     break;
             }
             priorityBar.setBackgroundColor(priorityColor);
+
+            // Show tags
+            chipGroupTaskTags.removeAllViews();
+            List<Tag> taskTags = tagMap.get(task.getId());
+            if (taskTags == null) taskTags = Collections.emptyList();
+            if (!taskTags.isEmpty()) {
+                chipGroupTaskTags.setVisibility(View.VISIBLE);
+                for (Tag tag : taskTags) {
+                    Chip chip = new Chip(itemView.getContext());
+                    chip.setText(tag.getName());
+                    chip.setTextSize(10);
+                    chip.setClickable(false);
+                    chip.setChipMinHeight(24f);
+                    if (tag.getColor() != null && !tag.getColor().isEmpty()) {
+                        try {
+                            chip.setChipBackgroundColor(ColorStateList.valueOf(Color.parseColor(tag.getColor())));
+                            chip.setTextColor(Color.WHITE);
+                        } catch (IllegalArgumentException e) {
+                            // ignore invalid colors
+                        }
+                    }
+                    chipGroupTaskTags.addView(chip);
+                }
+            } else {
+                chipGroupTaskTags.setVisibility(View.GONE);
+            }
 
             btnMarkComplete.setOnClickListener(v -> {
                 if (completeListener != null) {

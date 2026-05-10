@@ -111,4 +111,56 @@
     <!-- Calendar -->
     <string name="add_to_calendar">Add to Calendar</string>
     <string name="no_calendar_app">No calendar app found</string>
+
+    <!-- Tags -->
+    <string name="tags_section_header">Tags</string>
+    <string name="add_tag">+ Add Tag</string>
+    <string name="tag_name_hint">Tag Name</string>
+    <string name="tag_color_label">Color</string>
+    <string name="create_new_tag">Create New Tag</string>
+    <string name="select_tag">Select Tag</string>
+
+    <!-- Dashboard Stats -->
+    <string name="stat_pending">Pending</string>
+    <string name="stat_high_priority">High Priority</string>
+    <string name="stat_due_today">Due Today</string>
+    <string name="stat_overdue">Overdue</string>
+    <string name="stat_completed_this_week">Completed this week: %d</string>
+
+    <!-- Recurrence -->
+    <string name="recurrence_label">Recurrence</string>
+    <string name="recurrence_none">None</string>
+    <string name="recurrence_daily">Daily</string>
+    <string name="recurrence_weekly">Weekly</string>
+    <string name="recurrence_monthly">Monthly</string>
+
+    <!-- Widget -->
+    <string name="widget_empty_message">No pending tasks</string>
+
+    <!-- Export -->
+    <string name="export_title">Export Tasks</string>
+    <string name="export_as_json">Export as JSON</string>
+    <string name="export_as_csv">Export as CSV</string>
+    <string name="export_success">Export saved successfully</string>
+    <string name="export_error">Error exporting tasks</string>
+    <string name="share_export">Share Export</string>
+
+    <!-- Email Digest -->
+    <string name="email_digest_title">Email Digest</string>
+    <string name="smtp_host_hint">SMTP Host</string>
+    <string name="smtp_port_hint">SMTP Port</string>
+    <string name="email_username_hint">Email / Username</string>
+    <string name="email_password_hint">Password</string>
+    <string name="email_recipient_hint">Recipient Email</string>
+    <string name="email_frequency_label">Frequency</string>
+    <string name="email_save_schedule">Save &amp; Schedule</string>
+    <string name="email_config_saved">Email digest scheduled</string>
+    <string name="email_config_required_fields">Host, username, and recipient are required</string>
+    <string name="more_email_digest">Email Digest</string>
+    <string name="more_email_digest_subtitle">Configure email task reports</string>
+
+    <!-- Settings Sections -->
+    <string name="settings_integrations_header">Integrations</string>
+    <string name="settings_email_digest_label">Email Digest</string>
+    <string name="settings_email_digest_subtitle">Configure scheduled email reports</string>
 </resources>

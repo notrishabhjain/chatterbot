@@ -95,6 +95,45 @@
 
             </LinearLayout>
 
+            <!-- Recurrence -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/recurrence_label"
+                android:textSize="14sp"
+                android:textColor="@color/textSecondary" />
+
+            <Spinner
+                android:id="@+id/spinner_recurrence"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp" />
+
+            <!-- Tags Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/tags_section_header"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/textPrimary" />
+
+            <com.google.android.material.chip.ChipGroup
+                android:id="@+id/chip_group_tags"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chip_add_tag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/add_tag"
+                app:chipIcon="@android:drawable/ic_input_add"
+                style="@style/Widget.Material3.Chip.Assist" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_save"
                 android:layout_width="match_parent"
