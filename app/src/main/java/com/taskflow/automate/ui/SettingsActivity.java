@@ -9,6 +9,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
@@ -24,6 +25,10 @@ public class SettingsActivity extends AppCompatActivity {
     private Spinner spinnerHighPriority;
     private Spinner spinnerMediumPriority;
     private Spinner spinnerLowPriority;
+    private Spinner spinnerThemeMode;
+
+    private static final String[] THEME_LABELS = {"Light", "Dark", "System Default"};
+    private static final String[] THEME_VALUES = {"light", "dark", "system"};
 
     private static final String[] INTERVAL_LABELS = {
             "15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours"
@@ -38,6 +43,7 @@ public class SettingsActivity extends AppCompatActivity {
         preferenceManager = new PreferenceManager(this);
 
         setupToolbar();
+        setupThemeMode();
         setupAppToggles();
         setupReminderIntervals();
     }
@@ -45,6 +51,54 @@ public class SettingsActivity extends AppCompatActivity {
     private void setupToolbar() {
         MaterialToolbar toolbar = findViewById(R.id.toolbar_settings);
         toolbar.setNavigationOnClickListener(v -> finish());
+    }
+
+    private void setupThemeMode() {
+        spinnerThemeMode = findViewById(R.id.spinner_theme_mode);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_item, THEME_LABELS);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerThemeMode.setAdapter(adapter);
+
+        String currentMode = preferenceManager.getThemeMode();
+        int selectedIndex = 2; // default system
+        for (int i = 0; i < THEME_VALUES.length; i++) {
+            if (THEME_VALUES[i].equals(currentMode)) {
+                selectedIndex = i;
+                break;
+            }
+        }
+        spinnerThemeMode.setSelection(selectedIndex);
+
+        spinnerThemeMode.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            private boolean isInitialSelection = true;
+
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                if (isInitialSelection) {
+                    isInitialSelection = false;
+                    return;
+                }
+                String mode = THEME_VALUES[position];
+                preferenceManager.setThemeMode(mode);
+                switch (mode) {
+                    case "light":
+                        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                        break;
+                    case "dark":
+                        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                        break;
+                    default:
+                        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                        break;
+                }
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+                // No action needed
+            }
+        });
     }
 
     private void setupAppToggles() {

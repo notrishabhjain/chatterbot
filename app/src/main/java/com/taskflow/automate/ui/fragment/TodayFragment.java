@@ -1,21 +1,27 @@
 package com.taskflow.automate.ui.fragment;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.snackbar.Snackbar;
 import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.model.Task;
+import com.taskflow.automate.ui.SwipeCallback;
 import com.taskflow.automate.ui.TaskAdapter;
+import com.taskflow.automate.ui.TaskEditActivity;
 import com.taskflow.automate.util.ReminderScheduler;
 
 import java.util.ArrayList;
@@ -24,7 +30,8 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class TodayFragment extends Fragment implements TaskAdapter.OnTaskCompleteListener {
+public class TodayFragment extends Fragment implements TaskAdapter.OnTaskCompleteListener,
+        TaskAdapter.OnTaskClickListener, SwipeCallback.SwipeActionListener {
 
     private RecyclerView recyclerToday;
     private TextView textEmptyToday;
@@ -51,8 +58,14 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
 
         taskList = new ArrayList<>();
         taskAdapter = new TaskAdapter(taskList, this);
+        taskAdapter.setOnTaskClickListener(this);
         recyclerToday.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerToday.setAdapter(taskAdapter);
+
+        // Setup swipe gestures
+        SwipeCallback swipeCallback = new SwipeCallback(this);
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(swipeCallback);
+        itemTouchHelper.attachToRecyclerView(recyclerToday);
     }
 
     @Override
@@ -116,13 +129,66 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
 
     @Override
     public void onTaskComplete(Task task, int position) {
+        performUndoableComplete(task, position);
+    }
+
+    @Override
+    public void onTaskClick(Task task) {
+        Intent intent = new Intent(requireContext(), TaskEditActivity.class);
+        intent.putExtra(TaskEditActivity.EXTRA_TASK_ID, task.getId());
+        startActivity(intent);
+    }
+
+    @Override
+    public void onSwipeLeft(int position) {
+        Task task = taskAdapter.getTaskAtPosition(position);
+        if (task != null) {
+            performUndoableComplete(task, position);
+        }
+    }
+
+    @Override
+    public void onSwipeRight(int position) {
+        Task task = taskAdapter.getTaskAtPosition(position);
+        if (task != null) {
+            snoozeTask(task, position);
+        }
+    }
+
+    private void performUndoableComplete(Task task, int position) {
+        taskAdapter.removeTask(position);
+        updateEmptyState();
+
+        Snackbar snackbar = Snackbar.make(requireView(), R.string.task_completed_message, 5000);
+        snackbar.setAction(R.string.undo, v -> {
+            taskAdapter.addTask(position, task);
+            updateEmptyState();
+        });
+        snackbar.addCallback(new Snackbar.Callback() {
+            @Override
+            public void onDismissed(Snackbar transientBottomBar, int event) {
+                if (event != DISMISS_EVENT_ACTION) {
+                    executor.execute(() -> {
+                        AppDatabase.getInstance(requireContext())
+                                .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                        ReminderScheduler.cancelReminder(requireContext(), task.getId());
+                    });
+                }
+            }
+        });
+        snackbar.show();
+    }
+
+    private void snoozeTask(Task task, int position) {
+        long snoozeTime = System.currentTimeMillis() + (60 * 60 * 1000L); // 1 hour
+        task.setDueDate(snoozeTime);
+
         executor.execute(() -> {
-            AppDatabase.getInstance(requireContext()).taskDao().markComplete(task.getId());
-            ReminderScheduler.cancelReminder(requireContext(), task.getId());
+            AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
-                    taskAdapter.removeTask(position);
-                    updateEmptyState();
+                    taskAdapter.notifyItemChanged(position);
+                    Toast.makeText(requireContext(), R.string.snoozed_message, Toast.LENGTH_SHORT).show();
                 });
             }
         });

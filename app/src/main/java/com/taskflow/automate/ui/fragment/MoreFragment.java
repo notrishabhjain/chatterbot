@@ -37,8 +37,11 @@ public class MoreFragment extends Fragment {
         MaterialCardView cardExport = view.findViewById(R.id.card_export);
 
         cardHistory.setOnClickListener(v -> {
-            // History will be implemented in a later feature
-            Toast.makeText(requireContext(), "History coming soon", Toast.LENGTH_SHORT).show();
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, new HistoryFragment())
+                    .addToBackStack(null)
+                    .commit();
         });
 
         cardSettings.setOnClickListener(v -> {

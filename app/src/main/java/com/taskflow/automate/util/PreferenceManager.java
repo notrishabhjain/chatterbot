@@ -13,6 +13,7 @@ public class PreferenceManager {
     private static final String KEY_BLOCKED_APPS = "blocked_apps";
     private static final String KEY_KNOWN_APPS = "known_apps";
     private static final String KEY_FIRST_LAUNCH = "first_launch";
+    private static final String KEY_THEME_MODE = "theme_mode";
     private static final String KEY_REMINDER_INTERVAL_HIGH = "reminder_interval_high";
     private static final String KEY_REMINDER_INTERVAL_MEDIUM = "reminder_interval_medium";
     private static final String KEY_REMINDER_INTERVAL_LOW = "reminder_interval_low";
@@ -72,6 +73,14 @@ public class PreferenceManager {
                 break;
         }
         prefs.edit().putInt(key, minutes).apply();
+    }
+
+    public String getThemeMode() {
+        return prefs.getString(KEY_THEME_MODE, "system");
+    }
+
+    public void setThemeMode(String mode) {
+        prefs.edit().putString(KEY_THEME_MODE, mode).apply();
     }
 
     public boolean isFirstLaunch() {

@@ -71,4 +71,27 @@
     <!-- General -->
     <string name="source_label">From: %s</string>
     <string name="due_label">Due: %s</string>
+
+    <!-- Theme -->
+    <string name="theme_mode_header">Appearance</string>
+    <string name="theme_mode_label">Theme Mode</string>
+
+    <!-- History -->
+    <string name="empty_history">No completed tasks yet</string>
+    <string name="history_restore">Restore</string>
+    <string name="history_delete">Delete</string>
+
+    <!-- Task Edit -->
+    <string name="edit_task_title">Edit Task</string>
+    <string name="save_changes">Save Changes</string>
+    <string name="error_title_required">Title is required</string>
+
+    <!-- Undo / Snackbar -->
+    <string name="task_completed_message">Task completed</string>
+    <string name="undo">UNDO</string>
+    <string name="snoozed_message">Snoozed for 1 hour</string>
+
+    <!-- Search and Filter -->
+    <string name="search_tasks_hint">Search tasks...</string>
+    <string name="filter_all">All</string>
 </resources>

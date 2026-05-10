@@ -32,6 +32,10 @@
             android:name=".ui.SettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.TaskEditActivity"
+            android:exported="false" />
+
         <!-- Notification Listener Service -->
         <service
             android:name=".service.NotificationCaptureService"

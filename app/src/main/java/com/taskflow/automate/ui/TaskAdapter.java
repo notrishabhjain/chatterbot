@@ -24,14 +24,23 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskComplete(Task task, int position);
     }
 
+    public interface OnTaskClickListener {
+        void onTaskClick(Task task);
+    }
+
     private List<Task> tasks;
-    private final OnTaskCompleteListener listener;
+    private final OnTaskCompleteListener completeListener;
+    private OnTaskClickListener clickListener;
     private final SimpleDateFormat dateFormat;
 
     public TaskAdapter(List<Task> tasks, OnTaskCompleteListener listener) {
         this.tasks = tasks;
-        this.listener = listener;
+        this.completeListener = listener;
         this.dateFormat = new SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault());
+    }
+
+    public void setOnTaskClickListener(OnTaskClickListener listener) {
+        this.clickListener = listener;
     }
 
     @NonNull
@@ -64,6 +73,21 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             notifyItemRemoved(position);
             notifyItemRangeChanged(position, tasks.size());
         }
+    }
+
+    public void addTask(int position, Task task) {
+        if (position >= 0 && position <= tasks.size()) {
+            tasks.add(position, task);
+            notifyItemInserted(position);
+            notifyItemRangeChanged(position, tasks.size());
+        }
+    }
+
+    public Task getTaskAtPosition(int position) {
+        if (position >= 0 && position < tasks.size()) {
+            return tasks.get(position);
+        }
+        return null;
     }
 
     class TaskViewHolder extends RecyclerView.ViewHolder {
@@ -120,8 +144,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             priorityBar.setBackgroundColor(priorityColor);
 
             btnMarkComplete.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onTaskComplete(task, position);
+                if (completeListener != null) {
+                    completeListener.onTaskComplete(task, position);
+                }
+            });
+
+            itemView.setOnClickListener(v -> {
+                if (clickListener != null) {
+                    clickListener.onTaskClick(task);
                 }
             });
         }

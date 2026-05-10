@@ -2,6 +2,7 @@ package com.taskflow.automate.ui;
 
 import android.Manifest;
 import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
@@ -12,6 +13,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
@@ -24,6 +26,7 @@ import com.taskflow.automate.ui.fragment.MoreFragment;
 import com.taskflow.automate.ui.fragment.TasksFragment;
 import com.taskflow.automate.ui.fragment.TeamFragment;
 import com.taskflow.automate.ui.fragment.TodayFragment;
+import com.taskflow.automate.util.PreferenceManager;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        applyThemeFromPreferences(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -120,6 +124,22 @@ public class MainActivity extends AppCompatActivity {
                     != PackageManager.PERMISSION_GRANTED) {
                 notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
+        }
+    }
+
+    public static void applyThemeFromPreferences(Context context) {
+        PreferenceManager pm = new PreferenceManager(context);
+        String mode = pm.getThemeMode();
+        switch (mode) {
+            case "light":
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+                break;
+            case "dark":
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+                break;
+            default:
+                AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
+                break;
         }
     }
 }
