@@ -7,6 +7,39 @@
     <string name="empty_state_message">No pending tasks - great job!</string>
     <string name="mark_complete">Mark Complete</string>
 
+    <!-- Tab Labels -->
+    <string name="tab_today">Today</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_import">Import</string>
+    <string name="tab_team">Team</string>
+    <string name="tab_more">More</string>
+
+    <!-- Fragment Empty States -->
+    <string name="empty_today">No tasks due today</string>
+    <string name="empty_tasks">No pending tasks</string>
+    <string name="empty_team">No team members yet</string>
+
+    <!-- Import Fragment Buttons -->
+    <string name="btn_paste_clipboard">Paste from Clipboard</string>
+    <string name="btn_pick_file">Pick File</string>
+    <string name="btn_parse">Parse Transcript</string>
+    <string name="btn_create_tasks">Create Tasks</string>
+
+    <!-- More Menu -->
+    <string name="more_history">History</string>
+    <string name="more_history_subtitle">View completed tasks</string>
+    <string name="more_export">Export / Backup</string>
+    <string name="more_export_subtitle">Export tasks to file</string>
+    <string name="more_settings_subtitle">App preferences</string>
+
+    <!-- Add Task Dialog -->
+    <string name="add_task">Add Task</string>
+    <string name="dialog_task_title">Title</string>
+    <string name="dialog_task_description">Description</string>
+    <string name="dialog_task_priority">Priority</string>
+    <string name="dialog_task_due_date">Due Date:</string>
+    <string name="dialog_pick_date">Pick Date</string>
+
     <!-- Priority Labels -->
     <string name="priority_high">High</string>
     <string name="priority_medium">Medium</string>
