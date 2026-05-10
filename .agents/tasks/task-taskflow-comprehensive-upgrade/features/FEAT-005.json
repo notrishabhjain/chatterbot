@@ -1,0 +1,35 @@
+{
+  "id": "FEAT-005",
+  "type": "feat",
+  "description": "Polish and Power features: Tags/Labels system with color-coded chips, Dashboard Stats in TodayFragment, Recurring Tasks with auto-recreation, Home Screen Widget, Export/Backup to JSON/CSV, and Email Digest via WorkManager.",
+  "status": "completed",
+  "steps": [
+    "Step 1: Tags/Labels UI - Add a 'Tags' section to TaskEditActivity showing existing tags as colored Chips and a button to add new tags. Create dialog_add_tag.xml with name field and color picker (grid of predefined colors). When saving a task, manage TaskTagCrossRef entries. In TaskAdapter's item layout, add a FlowLayout/ChipGroup below description to show assigned tags as small colored chips. Create TagAdapter.java in ui/adapter/ for the tag management list.",
+    "Step 2: Dashboard Stats in TodayFragment - At the top of fragment_today.xml, add a card/section showing quick stats: pending count, high priority count, due today count, overdue count. Use TaskDao count queries. Display as a 2x2 grid of stat cards with icon, number, and label. Style with appropriate colors (red for overdue, orange for high priority, blue for due today, gray for pending). Add a simple weekly productivity indicator showing tasks completed this week (query completed tasks where completed_at is within current week).",
+    "Step 3: Recurring Tasks - Add recurrence options to the manual task creation dialog and TaskEditActivity: None, Daily, Weekly, Monthly. Store in recurrenceRule and recurrenceInterval fields. Create RecurringTaskManager.java (in util/) with method processCompletedRecurringTask(Task) that: when a recurring task is completed, creates a new task with same title/description/priority/assignee/recurrence settings but new createdAt and adjusted dueDate (add 1 day / 7 days / 30 days based on rule). Call this from the task completion flow (in the undo-completion Snackbar dismiss callback, after persisting completion).",
+    "Step 4: Home Screen Widget - Create app/src/main/java/com/taskflow/automate/widget/TaskWidgetProvider.java extending AppWidgetProvider. Create app/src/main/java/com/taskflow/automate/widget/TaskWidgetService.java extending RemoteViewsService for the list. Create app/src/main/java/com/taskflow/automate/widget/TaskWidgetRemoteViewsFactory.java implementing RemoteViewsService.RemoteViewsFactory - loads top 5 pending tasks by priority. Layout: app/src/main/res/layout/widget_task_list.xml (ListView with header), app/src/main/res/layout/widget_task_item.xml (task title + priority indicator + complete button). Create app/src/main/res/xml/widget_info.xml with metadata (minWidth, minHeight, updatePeriod 30min, initialLayout). Register widget in AndroidManifest.xml with receiver and service declarations.",
+    "Step 5: Export/Backup - Create ExportManager.java (in util/) with methods: exportToJson(Context, List<Task>) and exportToCsv(Context, List<Task>). JSON uses Gson to serialize task list. CSV writes header row + data rows. Both methods write to app's external files directory and return the file Uri. In MoreFragment, the 'Export' item opens a dialog asking JSON or CSV format, then runs the export and offers to share via ACTION_SEND intent. Add a share chooser for the exported file.",
+    "Step 6: Email Digest - Create app/src/main/java/com/taskflow/automate/worker/EmailDigestWorker.java extending Worker. It queries pending tasks, formats an HTML email body with task summary (grouped by priority), and sends via JavaMail (SMTP). Create EmailConfigActivity.java (in ui/) with layout for SMTP host, port, username, password, recipient email, and frequency (Daily/Weekly). Store config in PreferenceManager (new keys). Create scheduleEmailDigest() method that uses WorkManager PeriodicWorkRequest. Register EmailConfigActivity in AndroidManifest. Add 'Email Digest' option in MoreFragment or SettingsActivity.",
+    "Step 7: Update SettingsActivity to include: Dark/Light mode toggle (from FEAT-003), link to Email Digest configuration. Ensure the settings layout includes all new options cleanly organized with section headers."
+  ],
+  "acceptance_criteria": [
+    "Tags can be created with name and color, assigned to tasks, and displayed as colored chips on task cards",
+    "TodayFragment shows stats dashboard with pending/high-priority/due-today/overdue counts",
+    "Recurring tasks auto-create a new pending task when marked complete based on recurrence rule",
+    "Home screen widget shows top 5 pending tasks with complete buttons that work",
+    "Export produces valid JSON (Gson serialized) and CSV (comma-separated with headers) files",
+    "Email digest worker is properly configured with WorkManager periodic scheduling",
+    "Widget is declared in AndroidManifest with correct intent filters and metadata",
+    "All new activities are registered in AndroidManifest.xml"
+  ],
+  "verification": [
+    "Verify TaskWidgetProvider extends AppWidgetProvider and widget_info.xml has required attributes",
+    "Verify ExportManager produces syntactically correct JSON and CSV formatting logic",
+    "Verify EmailDigestWorker extends Worker and uses WorkManager PeriodicWorkRequest",
+    "Verify RecurringTaskManager correctly calculates next due date for daily/weekly/monthly",
+    "Verify widget service and factory are registered in AndroidManifest.xml",
+    "Verify EmailConfigActivity is registered in AndroidManifest.xml"
+  ],
+  "blocked_reason": null,
+  "findings": "All 7 steps implemented. Tags/Labels UI with colored chips in TaskEditActivity and item_task.xml. Dashboard stats (pending, high priority, due today, overdue, completed this week) in TodayFragment. RecurringTaskManager creates next recurrence on task completion in both TasksFragment and TodayFragment. Home screen widget with TaskWidgetProvider, TaskWidgetService, TaskWidgetRemoteViewsFactory showing top 5 tasks with complete buttons. ExportManager with JSON/CSV export and share intent in MoreFragment. EmailDigestWorker with WorkManager periodic scheduling and EmailConfigActivity. SettingsActivity updated with Email Digest integration section. All XML files validated well-formed. RecurringTaskManager verified to compile as pure Java. No build tools available for full compilation."
+}

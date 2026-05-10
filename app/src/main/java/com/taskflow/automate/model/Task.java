@@ -37,6 +37,24 @@ public class Task {
     @ColumnInfo(name = "reminder_count", defaultValue = "0")
     private int reminderCount;
 
+    @ColumnInfo(name = "completed_at")
+    private Long completedAt;
+
+    @ColumnInfo(name = "assignee")
+    private String assignee;
+
+    @ColumnInfo(name = "is_follow_up", defaultValue = "0")
+    private boolean isFollowUp;
+
+    @ColumnInfo(name = "linked_task_id")
+    private Long linkedTaskId;
+
+    @ColumnInfo(name = "recurrence_rule")
+    private String recurrenceRule;
+
+    @ColumnInfo(name = "recurrence_interval", defaultValue = "0")
+    private int recurrenceInterval;
+
     public Task() {
     }
 
@@ -81,6 +99,30 @@ public class Task {
         return reminderCount;
     }
 
+    public Long getCompletedAt() {
+        return completedAt;
+    }
+
+    public String getAssignee() {
+        return assignee;
+    }
+
+    public boolean isFollowUp() {
+        return isFollowUp;
+    }
+
+    public Long getLinkedTaskId() {
+        return linkedTaskId;
+    }
+
+    public String getRecurrenceRule() {
+        return recurrenceRule;
+    }
+
+    public int getRecurrenceInterval() {
+        return recurrenceInterval;
+    }
+
     // Setters
     public void setId(long id) {
         this.id = id;
@@ -120,6 +162,30 @@ public class Task {
 
     public void setReminderCount(int reminderCount) {
         this.reminderCount = reminderCount;
+    }
+
+    public void setCompletedAt(Long completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    public void setAssignee(String assignee) {
+        this.assignee = assignee;
+    }
+
+    public void setFollowUp(boolean followUp) {
+        isFollowUp = followUp;
+    }
+
+    public void setLinkedTaskId(Long linkedTaskId) {
+        this.linkedTaskId = linkedTaskId;
+    }
+
+    public void setRecurrenceRule(String recurrenceRule) {
+        this.recurrenceRule = recurrenceRule;
+    }
+
+    public void setRecurrenceInterval(int recurrenceInterval) {
+        this.recurrenceInterval = recurrenceInterval;
     }
 
     // Helper method
