@@ -38,4 +38,19 @@ public interface TaskDao {
 
     @Query("UPDATE tasks SET reminder_count = reminder_count + 1 WHERE id = :id")
     void incrementReminderCount(long id);
+
+    @Query("SELECT * FROM tasks WHERE status = 'pending' ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, created_at DESC")
+    List<Task> getAllTasksByDeadline();
+
+    @Query("SELECT * FROM tasks WHERE status = 'pending' AND assigner = :assigner ORDER BY priority ASC")
+    List<Task> getTasksByAssigner(String assigner);
+
+    @Query("SELECT * FROM tasks WHERE status = 'pending' AND is_follow_up = 1 ORDER BY priority ASC, created_at DESC")
+    List<Task> getFollowUpTasks();
+
+    @Query("SELECT DISTINCT assigner FROM tasks WHERE status = 'pending' AND assigner IS NOT NULL")
+    List<String> getAllAssigners();
+
+    @Query("SELECT * FROM tasks WHERE status = 'pending' AND due_date < :currentTime ORDER BY due_date ASC")
+    List<Task> getOverdueTasks(long currentTime);
 }

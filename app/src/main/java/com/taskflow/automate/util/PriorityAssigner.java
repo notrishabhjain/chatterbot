@@ -46,6 +46,20 @@ public class PriorityAssigner {
      * @return priority level: 1 (High), 2 (Medium), or 3 (Low)
      */
     public int assignPriority(String packageName, String title, String text, Long dueDate) {
+        return assignPriority(packageName, title, text, dueDate, null);
+    }
+
+    /**
+     * Assigns a priority level based on multiple factors including task type.
+     *
+     * @param packageName source app package name
+     * @param title       notification title
+     * @param text        notification text
+     * @param dueDate     extracted due date (nullable, epoch millis)
+     * @param taskType    classified task type (nullable)
+     * @return priority level: 1 (High), 2 (Medium), or 3 (Low)
+     */
+    public int assignPriority(String packageName, String title, String text, Long dueDate, String taskType) {
         int score = 0;
 
         // Factor 1: Source app scoring
@@ -56,6 +70,9 @@ public class PriorityAssigner {
 
         // Factor 3: Time sensitivity
         score += getTimeSensitivityScore(dueDate);
+
+        // Factor 4: Task type scoring
+        score += getTaskTypeScore(taskType, dueDate);
 
         // Convert score to priority level
         if (score >= 3) {
@@ -124,5 +141,29 @@ public class PriorityAssigner {
         }
 
         return 0;
+    }
+
+    private int getTaskTypeScore(String taskType, Long dueDate) {
+        if (taskType == null) {
+            return 0;
+        }
+
+        switch (taskType) {
+            case "DEADLINE":
+            case "APPROVAL":
+                return 1;
+            case "MEETING":
+                // Meeting gets +1 if due within 2 hours
+                if (dueDate != null) {
+                    long now = System.currentTimeMillis();
+                    long diffMillis = dueDate - now;
+                    if (diffMillis > 0 && diffMillis <= 2 * 60 * 60 * 1000L) {
+                        return 1;
+                    }
+                }
+                return 0;
+            default:
+                return 0;
+        }
     }
 }

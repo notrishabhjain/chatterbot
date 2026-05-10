@@ -73,16 +73,26 @@ public class NotificationCaptureService extends NotificationListenerService {
         }
 
         Bundle extras = notification.extras;
-        String title = extras.getString(Notification.EXTRA_TITLE);
-        String text = extras.getString(Notification.EXTRA_TEXT);
+        String title = getStringExtra(extras, Notification.EXTRA_TITLE);
+        String text = getStringExtra(extras, Notification.EXTRA_TEXT);
+        String bigText = getStringExtra(extras, Notification.EXTRA_BIG_TEXT);
+        String subText = getStringExtra(extras, Notification.EXTRA_SUB_TEXT);
+        String infoText = getStringExtra(extras, Notification.EXTRA_INFO_TEXT);
 
-        // Skip if both title and text are empty
-        if ((title == null || title.isEmpty()) && (text == null || text.isEmpty())) {
+        // Skip if all text fields are empty
+        if (isEmpty(title) && isEmpty(text) && isEmpty(bigText) && isEmpty(subText) && isEmpty(infoText)) {
             return;
         }
 
-        // Extract task information
-        TaskExtractor.TaskExtractionResult result = taskExtractor.extractTask(title, text, packageName);
+        // Combine subText and infoText into the subText parameter for extraction
+        String combinedSubText = combineSubTexts(subText, infoText);
+
+        // Extract task information using weighted scoring
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask(title, text, bigText, combinedSubText, packageName);
+
+        Log.d(TAG, "Notification from " + packageName + " scored: " + result.actionabilityScore
+                + " (threshold: 25)");
 
         if (!result.isActionable) {
             return;
@@ -101,6 +111,30 @@ public class NotificationCaptureService extends NotificationListenerService {
     private boolean isAppBlocked(String packageName) {
         Set<String> blockedApps = preferenceManager.getBlockedApps();
         return blockedApps.contains(packageName);
+    }
+
+    private String getStringExtra(Bundle extras, String key) {
+        CharSequence cs = extras.getCharSequence(key);
+        return cs != null ? cs.toString() : null;
+    }
+
+    private boolean isEmpty(String s) {
+        return s == null || s.isEmpty();
+    }
+
+    private String combineSubTexts(String subText, String infoText) {
+        if (isEmpty(subText) && isEmpty(infoText)) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        if (!isEmpty(subText)) {
+            sb.append(subText);
+        }
+        if (!isEmpty(infoText)) {
+            if (sb.length() > 0) sb.append(" ");
+            sb.append(infoText);
+        }
+        return sb.toString();
     }
 
     private void createAndPersistTask(TaskExtractor.TaskExtractionResult result,
@@ -128,10 +162,15 @@ public class NotificationCaptureService extends NotificationListenerService {
                 task.setCreatedAt(System.currentTimeMillis());
                 task.setStatus("pending");
                 task.setNotificationKey(notificationKey);
+                task.setAssigner(result.assigner);
+                task.setTaskType(result.taskType);
+                task.setFollowUp(result.isFollowUp);
+                task.setSourceNotificationText(result.sourceNotificationText);
 
-                // Assign priority
+                // Assign priority (with task type factor)
                 int priority = priorityAssigner.assignPriority(
-                        packageName, result.taskTitle, result.taskDescription, result.dueDateHint);
+                        packageName, result.taskTitle, result.taskDescription,
+                        result.dueDateHint, result.taskType);
                 task.setPriority(priority);
 
                 // Insert into database
@@ -141,7 +180,10 @@ public class NotificationCaptureService extends NotificationListenerService {
                 // Schedule reminder
                 ReminderScheduler.scheduleReminder(getApplicationContext(), task);
 
-                Log.d(TAG, "Task created: " + task.getTitle() + " (priority: " + task.getPriorityLabel() + ")");
+                Log.d(TAG, "Task created: " + task.getTitle()
+                        + " (priority: " + task.getPriorityLabel()
+                        + ", type: " + task.getTaskType()
+                        + ", score: " + result.actionabilityScore + ")");
             } catch (Exception e) {
                 Log.e(TAG, "Error creating task", e);
             }

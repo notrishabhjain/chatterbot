@@ -37,6 +37,18 @@ public class Task {
     @ColumnInfo(name = "reminder_count", defaultValue = "0")
     private int reminderCount;
 
+    @ColumnInfo(name = "assigner")
+    private String assigner;
+
+    @ColumnInfo(name = "task_type")
+    private String taskType;
+
+    @ColumnInfo(name = "is_follow_up", defaultValue = "0")
+    private boolean isFollowUp;
+
+    @ColumnInfo(name = "source_notification_text")
+    private String sourceNotificationText;
+
     public Task() {
     }
 
@@ -81,6 +93,22 @@ public class Task {
         return reminderCount;
     }
 
+    public String getAssigner() {
+        return assigner;
+    }
+
+    public String getTaskType() {
+        return taskType;
+    }
+
+    public boolean isFollowUp() {
+        return isFollowUp;
+    }
+
+    public String getSourceNotificationText() {
+        return sourceNotificationText;
+    }
+
     // Setters
     public void setId(long id) {
         this.id = id;
@@ -120,6 +148,22 @@ public class Task {
 
     public void setReminderCount(int reminderCount) {
         this.reminderCount = reminderCount;
+    }
+
+    public void setAssigner(String assigner) {
+        this.assigner = assigner;
+    }
+
+    public void setTaskType(String taskType) {
+        this.taskType = taskType;
+    }
+
+    public void setFollowUp(boolean followUp) {
+        isFollowUp = followUp;
+    }
+
+    public void setSourceNotificationText(String sourceNotificationText) {
+        this.sourceNotificationText = sourceNotificationText;
     }
 
     // Helper method
