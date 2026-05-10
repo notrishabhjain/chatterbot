@@ -60,8 +60,8 @@ public class HistoryFragment extends Fragment implements HistoryAdapter.OnHistor
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    public void onDestroyView() {
+        super.onDestroyView();
         executor.shutdown();
     }
 

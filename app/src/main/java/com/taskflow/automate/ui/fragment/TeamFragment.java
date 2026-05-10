@@ -68,8 +68,8 @@ public class TeamFragment extends Fragment implements TeamMemberAdapter.OnTeamMe
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    public void onDestroyView() {
+        super.onDestroyView();
         executor.shutdown();
     }
 

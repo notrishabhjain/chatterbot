@@ -102,8 +102,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
+    public void onDestroyView() {
+        super.onDestroyView();
         executor.shutdown();
     }
 

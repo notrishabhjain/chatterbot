@@ -32,9 +32,9 @@ public interface TagDao {
     @Delete
     void deleteTaskTagCrossRef(TaskTagCrossRef crossRef);
 
-    @Query("SELECT tags.* FROM tags INNER JOIN task_tag_cross_ref ON tags.id = task_tag_cross_ref.tag_id WHERE task_tag_cross_ref.task_id = :taskId")
+    @Query("SELECT tags.* FROM tags INNER JOIN task_tag_cross_ref ON tags.id = task_tag_cross_ref.tagId WHERE task_tag_cross_ref.taskId = :taskId")
     List<Tag> getTagsForTask(long taskId);
 
-    @Query("SELECT tasks.* FROM tasks INNER JOIN task_tag_cross_ref ON tasks.id = task_tag_cross_ref.task_id WHERE task_tag_cross_ref.tag_id = :tagId")
+    @Query("SELECT tasks.* FROM tasks INNER JOIN task_tag_cross_ref ON tasks.id = task_tag_cross_ref.taskId WHERE task_tag_cross_ref.tagId = :tagId")
     List<Task> getTasksForTag(long tagId);
 }

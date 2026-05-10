@@ -10,7 +10,10 @@ import android.widget.RemoteViews;
 
 import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
+import com.taskflow.automate.database.TaskDao;
+import com.taskflow.automate.model.Task;
 import com.taskflow.automate.ui.MainActivity;
+import com.taskflow.automate.util.RecurringTaskManager;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -58,7 +61,18 @@ public class TaskWidgetProvider extends AppWidgetProvider {
             if (taskId != -1) {
                 ExecutorService executor = Executors.newSingleThreadExecutor();
                 executor.execute(() -> {
-                    AppDatabase.getInstance(context).taskDao().markCompleteWithTimestamp(taskId, System.currentTimeMillis());
+                    TaskDao taskDao = AppDatabase.getInstance(context).taskDao();
+                    Task task = taskDao.getTaskById(taskId);
+                    if (task != null) {
+                        taskDao.markCompleteWithTimestamp(taskId, System.currentTimeMillis());
+
+                        // Handle recurring tasks
+                        RecurringTaskManager recurringManager = new RecurringTaskManager();
+                        Task nextTask = recurringManager.createNextRecurrence(task);
+                        if (nextTask != null) {
+                            taskDao.insertTask(nextTask);
+                        }
+                    }
                     // Refresh widget
                     AppWidgetManager widgetManager = AppWidgetManager.getInstance(context);
                     int[] ids = widgetManager.getAppWidgetIds(
