@@ -38,4 +38,28 @@
     <!-- General -->
     <string name="source_label">From: %s</string>
     <string name="due_label">Due: %s</string>
+
+    <!-- Tab Labels -->
+    <string name="tab_priority">Priority</string>
+    <string name="tab_deadline">Deadline</string>
+    <string name="tab_assigner">Assigner</string>
+    <string name="tab_follow_up">Follow-up</string>
+
+    <!-- Task Card Labels -->
+    <string name="assigned_by_label">Assigned by: %s</string>
+    <string name="follow_up_label">Follow-up</string>
+
+    <!-- Task Type Labels -->
+    <string name="task_type_meeting">MEETING</string>
+    <string name="task_type_deadline">DEADLINE</string>
+    <string name="task_type_follow_up">FOLLOW UP</string>
+    <string name="task_type_request">REQUEST</string>
+    <string name="task_type_approval">APPROVAL</string>
+    <string name="task_type_reminder">REMINDER</string>
+    <string name="task_type_general">GENERAL</string>
+
+    <!-- Empty State Messages -->
+    <string name="empty_state_deadline">No tasks with deadlines</string>
+    <string name="empty_state_assigner">No assigned tasks yet</string>
+    <string name="empty_state_follow_up">No follow-up tasks</string>
 </resources>

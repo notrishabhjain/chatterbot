@@ -19,6 +19,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.tabs.TabLayout;
 import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.model.Task;
@@ -32,10 +33,17 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTaskCompleteListener {
 
+    private static final int VIEW_PRIORITY = 0;
+    private static final int VIEW_DEADLINE = 1;
+    private static final int VIEW_ASSIGNER = 2;
+    private static final int VIEW_FOLLOW_UP = 3;
+
     private RecyclerView recyclerTasks;
     private TextView textEmptyState;
+    private TabLayout tabLayout;
     private TaskAdapter taskAdapter;
     private List<Task> taskList;
+    private int currentViewMode = VIEW_PRIORITY;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
@@ -49,6 +57,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         setContentView(R.layout.activity_main);
 
         setupToolbar();
+        setupTabLayout();
         setupRecyclerView();
         checkNotificationListenerPermission();
         requestPostNotificationPermission();
@@ -78,6 +87,33 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         });
     }
 
+    private void setupTabLayout() {
+        tabLayout = findViewById(R.id.tab_layout);
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.tab_priority));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.tab_deadline));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.tab_assigner));
+        tabLayout.addTab(tabLayout.newTab().setText(R.string.tab_follow_up));
+
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                currentViewMode = tab.getPosition();
+                loadTasks();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+                // No action needed
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                // Refresh on reselect
+                loadTasks();
+            }
+        });
+    }
+
     private void setupRecyclerView() {
         recyclerTasks = findViewById(R.id.recycler_tasks);
         textEmptyState = findViewById(R.id.text_empty_state);
@@ -90,7 +126,22 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
     private void loadTasks() {
         executor.execute(() -> {
-            List<Task> tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByPriority();
+            List<Task> tasks;
+            switch (currentViewMode) {
+                case VIEW_DEADLINE:
+                    tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByDeadline();
+                    break;
+                case VIEW_ASSIGNER:
+                    tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByPriority();
+                    break;
+                case VIEW_FOLLOW_UP:
+                    tasks = AppDatabase.getInstance(this).taskDao().getFollowUpTasks();
+                    break;
+                case VIEW_PRIORITY:
+                default:
+                    tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByPriority();
+                    break;
+            }
             runOnUiThread(() -> {
                 taskList.clear();
                 taskList.addAll(tasks);
@@ -104,6 +155,22 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         if (taskList.isEmpty()) {
             textEmptyState.setVisibility(View.VISIBLE);
             recyclerTasks.setVisibility(View.GONE);
+            // Set contextual empty state message
+            switch (currentViewMode) {
+                case VIEW_DEADLINE:
+                    textEmptyState.setText(R.string.empty_state_deadline);
+                    break;
+                case VIEW_ASSIGNER:
+                    textEmptyState.setText(R.string.empty_state_assigner);
+                    break;
+                case VIEW_FOLLOW_UP:
+                    textEmptyState.setText(R.string.empty_state_follow_up);
+                    break;
+                case VIEW_PRIORITY:
+                default:
+                    textEmptyState.setText(R.string.empty_state_message);
+                    break;
+            }
         } else {
             textEmptyState.setVisibility(View.GONE);
             recyclerTasks.setVisibility(View.VISIBLE);
