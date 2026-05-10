@@ -37,6 +37,18 @@ public class TaskExtractor {
             "com.microsoft.teams"
     ));
 
+    private static final Set<String> MESSAGING_PACKAGES = new HashSet<>(Arrays.asList(
+            "com.whatsapp",
+            "com.whatsapp.w4b",
+            "org.telegram.messenger",
+            "com.slack",
+            "com.Slack",
+            "com.microsoft.teams",
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            "com.android.mms"
+    ));
+
     // High-weight action keywords (15 points each)
     private static final Set<String> HIGH_ACTION_KEYWORDS = new HashSet<>(Arrays.asList(
             "urgent", "asap", "immediately", "action required", "critical",
@@ -169,7 +181,7 @@ public class TaskExtractor {
             result.taskTitle = title != null && !title.isEmpty() ? title : "Notification Task";
             result.taskDescription = text != null ? text : (bigText != null ? bigText : "");
             result.dueDateHint = extractDueDateHint(lowerCombined);
-            result.assigner = extractAssigner(title);
+            result.assigner = extractAssigner(title, packageName);
             result.taskType = classifyTaskType(lowerCombined);
             result.isFollowUp = detectFollowUp(lowerCombined);
         }
@@ -313,11 +325,15 @@ public class TaskExtractor {
         return 0;
     }
 
-    private String extractAssigner(String title) {
+    private String extractAssigner(String title, String packageName) {
         if (title == null || title.isEmpty()) {
             return null;
         }
-        // In messaging apps, the title is typically the sender name
+        // Only extract assigner from messaging app notifications where the title
+        // is typically the sender's name
+        if (packageName == null || !MESSAGING_PACKAGES.contains(packageName)) {
+            return null;
+        }
         // Skip generic titles that are not person names
         String lowerTitle = title.toLowerCase();
         if (lowerTitle.equals("notification") || lowerTitle.equals("new message") ||
@@ -329,38 +345,55 @@ public class TaskExtractor {
     }
 
     private String classifyTaskType(String lowerCombined) {
-        // Check in priority order
-        for (String keyword : MEETING_KEYWORDS) {
-            if (lowerCombined.contains(keyword)) {
-                return "MEETING";
+        // Score each category by counting keyword hits
+        int meetingScore = countKeywordHits(lowerCombined, MEETING_KEYWORDS);
+        int deadlineScore = countKeywordHits(lowerCombined, DEADLINE_KEYWORDS);
+        int followUpScore = countKeywordHits(lowerCombined, FOLLOW_UP_KEYWORDS);
+        int approvalScore = countKeywordHits(lowerCombined, APPROVAL_KEYWORDS);
+        int requestScore = countKeywordHits(lowerCombined, REQUEST_KEYWORDS);
+        int reminderScore = countKeywordHits(lowerCombined, REMINDER_KEYWORDS);
+
+        // Find the category with the most hits
+        // Priority order for tiebreaker: MEETING > DEADLINE > FOLLOW_UP > APPROVAL > REQUEST > REMINDER
+        String bestType = "GENERAL";
+        int bestScore = 0;
+
+        if (meetingScore > bestScore) {
+            bestScore = meetingScore;
+            bestType = "MEETING";
+        }
+        if (deadlineScore > bestScore) {
+            bestScore = deadlineScore;
+            bestType = "DEADLINE";
+        }
+        if (followUpScore > bestScore) {
+            bestScore = followUpScore;
+            bestType = "FOLLOW_UP";
+        }
+        if (approvalScore > bestScore) {
+            bestScore = approvalScore;
+            bestType = "APPROVAL";
+        }
+        if (requestScore > bestScore) {
+            bestScore = requestScore;
+            bestType = "REQUEST";
+        }
+        if (reminderScore > bestScore) {
+            bestScore = reminderScore;
+            bestType = "REMINDER";
+        }
+
+        return bestType;
+    }
+
+    private int countKeywordHits(String text, Set<String> keywords) {
+        int count = 0;
+        for (String keyword : keywords) {
+            if (text.contains(keyword)) {
+                count++;
             }
         }
-        for (String keyword : DEADLINE_KEYWORDS) {
-            if (lowerCombined.contains(keyword)) {
-                return "DEADLINE";
-            }
-        }
-        for (String keyword : FOLLOW_UP_KEYWORDS) {
-            if (lowerCombined.contains(keyword)) {
-                return "FOLLOW_UP";
-            }
-        }
-        for (String keyword : APPROVAL_KEYWORDS) {
-            if (lowerCombined.contains(keyword)) {
-                return "APPROVAL";
-            }
-        }
-        for (String keyword : REQUEST_KEYWORDS) {
-            if (lowerCombined.contains(keyword)) {
-                return "REQUEST";
-            }
-        }
-        for (String keyword : REMINDER_KEYWORDS) {
-            if (lowerCombined.contains(keyword)) {
-                return "REMINDER";
-            }
-        }
-        return "GENERAL";
+        return count;
     }
 
     private boolean detectFollowUp(String lowerCombined) {

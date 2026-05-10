@@ -1,7 +1,10 @@
 package com.taskflow.automate.ui;
 
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.LayerDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -114,6 +117,44 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         }
     }
 
+    private GradientDrawable getGradientDrawable(TextView view) {
+        Drawable drawable = view.getBackground();
+        if (drawable == null) {
+            GradientDrawable newDrawable = new GradientDrawable();
+            newDrawable.setCornerRadius(16f);
+            view.setBackground(newDrawable);
+            return newDrawable;
+        }
+        drawable = drawable.mutate();
+        if (drawable instanceof GradientDrawable) {
+            return (GradientDrawable) drawable;
+        }
+        if (drawable instanceof RippleDrawable) {
+            RippleDrawable ripple = (RippleDrawable) drawable;
+            int count = ripple.getNumberOfLayers();
+            for (int i = 0; i < count; i++) {
+                Drawable layer = ripple.getDrawable(i);
+                if (layer instanceof GradientDrawable) {
+                    return (GradientDrawable) layer;
+                }
+            }
+        }
+        if (drawable instanceof LayerDrawable) {
+            LayerDrawable layerDrawable = (LayerDrawable) drawable;
+            for (int i = 0; i < layerDrawable.getNumberOfLayers(); i++) {
+                Drawable layer = layerDrawable.getDrawable(i);
+                if (layer instanceof GradientDrawable) {
+                    return (GradientDrawable) layer;
+                }
+            }
+        }
+        // Could not unwrap; create a new GradientDrawable and set it as background
+        GradientDrawable newDrawable = new GradientDrawable();
+        newDrawable.setCornerRadius(16f);
+        view.setBackground(newDrawable);
+        return newDrawable;
+    }
+
     class TaskViewHolder extends RecyclerView.ViewHolder {
 
         private final View priorityBar;
@@ -170,9 +211,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 textTaskTypeBadge.setVisibility(View.VISIBLE);
                 textTaskTypeBadge.setText(getTaskTypeLabel(taskType));
                 int typeColor = getTaskTypeColor(taskType);
-                GradientDrawable background = (GradientDrawable) textTaskTypeBadge.getBackground().mutate();
-                background.setColor(typeColor);
-                textTaskTypeBadge.setBackground(background);
+                GradientDrawable background = getGradientDrawable(textTaskTypeBadge);
+                if (background != null) {
+                    background.setColor(typeColor);
+                    textTaskTypeBadge.setBackground(background);
+                }
             } else {
                 textTaskTypeBadge.setVisibility(View.GONE);
             }
@@ -188,9 +231,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             // Follow-up indicator
             if (task.isFollowUp()) {
                 textFollowUpIndicator.setVisibility(View.VISIBLE);
-                GradientDrawable followUpBg = (GradientDrawable) textFollowUpIndicator.getBackground().mutate();
-                followUpBg.setColor(Color.parseColor("#E65100"));
-                textFollowUpIndicator.setBackground(followUpBg);
+                GradientDrawable followUpBg = getGradientDrawable(textFollowUpIndicator);
+                if (followUpBg != null) {
+                    followUpBg.setColor(Color.parseColor("#E65100"));
+                    textFollowUpIndicator.setBackground(followUpBg);
+                }
             } else {
                 textFollowUpIndicator.setVisibility(View.GONE);
             }

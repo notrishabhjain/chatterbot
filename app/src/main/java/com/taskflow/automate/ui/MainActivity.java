@@ -22,6 +22,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.tabs.TabLayout;
 import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
+import com.taskflow.automate.database.TaskDao;
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.service.NotificationCaptureService;
 import com.taskflow.automate.util.ReminderScheduler;
@@ -126,20 +127,21 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
     private void loadTasks() {
         executor.execute(() -> {
+            TaskDao taskDao = AppDatabase.getInstance(this).taskDao();
             List<Task> tasks;
             switch (currentViewMode) {
                 case VIEW_DEADLINE:
-                    tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByDeadline();
+                    tasks = taskDao.getAllTasksByDeadline();
                     break;
                 case VIEW_ASSIGNER:
-                    tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByPriority();
+                    tasks = loadTasksGroupedByAssigner(taskDao);
                     break;
                 case VIEW_FOLLOW_UP:
-                    tasks = AppDatabase.getInstance(this).taskDao().getFollowUpTasks();
+                    tasks = taskDao.getFollowUpTasks();
                     break;
                 case VIEW_PRIORITY:
                 default:
-                    tasks = AppDatabase.getInstance(this).taskDao().getAllTasksByPriority();
+                    tasks = taskDao.getAllTasksByPriority();
                     break;
             }
             runOnUiThread(() -> {
@@ -149,6 +151,22 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
                 updateEmptyState();
             });
         });
+    }
+
+    private List<Task> loadTasksGroupedByAssigner(TaskDao taskDao) {
+        List<Task> grouped = new ArrayList<>();
+        List<String> assigners = taskDao.getAllAssigners();
+        for (String assigner : assigners) {
+            grouped.addAll(taskDao.getTasksByAssigner(assigner));
+        }
+        // Add tasks with no assigner at the end
+        List<Task> allTasks = taskDao.getAllTasksByPriority();
+        for (Task task : allTasks) {
+            if (task.getAssigner() == null || task.getAssigner().isEmpty()) {
+                grouped.add(task);
+            }
+        }
+        return grouped;
     }
 
     private void updateEmptyState() {

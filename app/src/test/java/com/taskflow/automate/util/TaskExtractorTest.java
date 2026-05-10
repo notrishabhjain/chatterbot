@@ -150,7 +150,39 @@ public class TaskExtractorTest {
     @Test
     public void assignerExtraction_genericTitle_returnsNull() {
         TaskExtractor.TaskExtractionResult result =
-                taskExtractor.extractTask("Notification", "Please complete this task urgently", null, null, "com.some.app");
+                taskExtractor.extractTask("Notification", "Please complete this task urgently", null, null, "com.whatsapp");
+        assertTrue(result.isActionable);
+        assertNull(result.assigner);
+    }
+
+    @Test
+    public void assignerExtraction_nonMessagingApp_returnsNull() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Project Chat", "Please review this document urgently", null, null, "com.google.android.calendar");
+        assertTrue(result.isActionable);
+        assertNull(result.assigner);
+    }
+
+    @Test
+    public void assignerExtraction_telegram_returnsAssigner() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Alex Smith", "Can you please send the report?", null, null, "org.telegram.messenger");
+        assertTrue(result.isActionable);
+        assertEquals("Alex Smith", result.assigner);
+    }
+
+    @Test
+    public void assignerExtraction_teams_returnsAssigner() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Jane Doe", "Please review this urgently", null, null, "com.microsoft.teams");
+        assertTrue(result.isActionable);
+        assertEquals("Jane Doe", result.assigner);
+    }
+
+    @Test
+    public void assignerExtraction_unknownApp_returnsNull() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Budget Q3", "Action required: approve the budget", null, null, "com.some.random.app");
         assertTrue(result.isActionable);
         assertNull(result.assigner);
     }
@@ -184,7 +216,7 @@ public class TaskExtractorTest {
     @Test
     public void taskTypeClassification_request() {
         TaskExtractor.TaskExtractionResult result =
-                taskExtractor.extractTask("Team Lead", "Can you send me the latest figures by EOD?", null, null, "com.slack");
+                taskExtractor.extractTask("Team Lead", "Can you please help with the latest figures?", null, null, "com.slack");
         assertTrue(result.isActionable);
         assertEquals("REQUEST", result.taskType);
     }
@@ -200,7 +232,7 @@ public class TaskExtractorTest {
     @Test
     public void taskTypeClassification_reminder() {
         TaskExtractor.TaskExtractionResult result =
-                taskExtractor.extractTask("App", "Don't forget to submit your timesheet this week", null, null, "com.some.app");
+                taskExtractor.extractTask("App", "Don't forget your timesheet, remember it's this week", null, null, "com.some.app");
         assertTrue(result.isActionable);
         assertEquals("REMINDER", result.taskType);
     }
@@ -208,7 +240,7 @@ public class TaskExtractorTest {
     @Test
     public void taskTypeClassification_general() {
         TaskExtractor.TaskExtractionResult result =
-                taskExtractor.extractTask("Calendar", "Event starting soon in the conference room", null, null, "com.google.android.calendar");
+                taskExtractor.extractTask("Calendar", "Event starting soon in the main hall", null, null, "com.google.android.calendar");
         assertTrue(result.isActionable);
         assertEquals("GENERAL", result.taskType);
     }
