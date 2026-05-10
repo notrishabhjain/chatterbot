@@ -1,10 +1,16 @@
 package com.taskflow.automate.ui;
 
+import android.content.ActivityNotFoundException;
+import android.content.Context;
+import android.content.Intent;
 import android.graphics.Color;
+import android.provider.CalendarContract;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
@@ -98,6 +104,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         private final TextView textSourceApp;
         private final TextView textDueDate;
         private final MaterialButton btnMarkComplete;
+        private final ImageButton btnAddCalendar;
 
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -107,6 +114,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             textSourceApp = itemView.findViewById(R.id.text_source_app);
             textDueDate = itemView.findViewById(R.id.text_due_date);
             btnMarkComplete = itemView.findViewById(R.id.btn_mark_complete);
+            btnAddCalendar = itemView.findViewById(R.id.btn_add_calendar);
         }
 
         void bind(Task task, int position) {
@@ -146,6 +154,23 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             btnMarkComplete.setOnClickListener(v -> {
                 if (completeListener != null) {
                     completeListener.onTaskComplete(task, position);
+                }
+            });
+
+            btnAddCalendar.setOnClickListener(v -> {
+                Context context = itemView.getContext();
+                Intent intent = new Intent(Intent.ACTION_INSERT);
+                intent.setData(CalendarContract.Events.CONTENT_URI);
+                intent.putExtra(CalendarContract.Events.TITLE, task.getTitle());
+                intent.putExtra(CalendarContract.Events.DESCRIPTION,
+                        task.getDescription() != null ? task.getDescription() : "");
+                long startTime = task.getDueDate() != null ? task.getDueDate() : System.currentTimeMillis();
+                intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTime);
+                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTime + 60 * 60 * 1000);
+                try {
+                    context.startActivity(intent);
+                } catch (ActivityNotFoundException e) {
+                    Toast.makeText(context, "No calendar app found", Toast.LENGTH_SHORT).show();
                 }
             });
 
