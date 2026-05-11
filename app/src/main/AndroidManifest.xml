@@ -85,6 +85,7 @@
             </intent-filter>
             <intent-filter>
                 <action android:name="com.taskflow.automate.WIDGET_COMPLETE_TASK" />
+                <action android:name="com.taskflow.automate.WIDGET_VIEW_TASK" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
