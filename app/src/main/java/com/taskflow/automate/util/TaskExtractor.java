@@ -9,21 +9,70 @@ import java.util.regex.Pattern;
 
 public class TaskExtractor {
 
+    // Only block apps that NEVER produce useful notifications
     private static final Set<String> NON_ACTIONABLE_PACKAGES = new HashSet<>(Arrays.asList(
             "com.spotify.music",
             "com.google.android.music",
             "com.google.android.apps.youtube.music",
             "com.android.providers.downloads",
-            "com.android.vending",
             "com.android.systemui",
             "android"
     ));
 
+    // Apps whose notifications are always considered actionable
+    private static final Set<String> ALWAYS_ACTIONABLE_PACKAGES = new HashSet<>(Arrays.asList(
+            // Email
+            "com.google.android.gm",
+            "com.microsoft.office.outlook",
+            "com.samsung.android.email.provider",
+            "com.yahoo.mobile.client.android.mail",
+            // Calendar
+            "com.google.android.calendar",
+            "com.samsung.android.calendar",
+            // Messaging
+            "com.whatsapp",
+            "com.whatsapp.w4b",
+            "org.telegram.messenger",
+            "com.slack",
+            "com.Slack",
+            "com.microsoft.teams",
+            "org.thoughtcrime.securesms",
+            "com.discord",
+            "com.google.android.apps.messaging",
+            "com.samsung.android.messaging",
+            // Productivity
+            "com.google.android.apps.tasks",
+            "com.todoist",
+            "com.ticktick.task",
+            "com.microsoft.todos",
+            "com.asana.app",
+            "com.trello",
+            "notion.id",
+            "com.atlassian.android.jira.core"
+    ));
+
     private static final Set<String> ACTION_KEYWORDS = new HashSet<>(Arrays.asList(
+            // English
             "please", "need", "review", "approve", "submit", "send",
             "complete", "follow up", "follow-up", "action required",
             "respond", "reply", "confirm", "schedule", "attend",
-            "reminder", "deadline", "due", "meeting", "call"
+            "reminder", "deadline", "due", "meeting", "call",
+            "urgent", "asap", "important", "todo", "task",
+            "check", "update", "share", "prepare", "fix",
+            "look into", "get back", "let me know", "can you",
+            "could you", "would you", "will you", "make sure",
+            // Hindi (transliterated)
+            "karo", "karna", "bhejo", "dekho", "batao", "kar do",
+            "kar dena", "bhej do", "bhej dena", "check karo",
+            "reply karo", "send karo", "complete karo", "jaldi",
+            "zaruri", "zaroori", "jaruri", "important hai",
+            "kal tak", "aaj", "abhi", "turant",
+            // Hindi (Unicode)
+            "\u0915\u0930\u094B", "\u0915\u0930\u0928\u093E", "\u092D\u0947\u091C\u094B",
+            "\u0926\u0947\u0916\u094B", "\u092C\u0924\u093E\u0913",
+            "\u091C\u0930\u0942\u0930\u0940", "\u091C\u0932\u094D\u0926\u0940",
+            "\u092E\u0940\u091F\u093F\u0902\u0917", "\u0915\u0949\u0932",
+            "\u092F\u093E\u0926", "\u0930\u093F\u092E\u093E\u0907\u0902\u0921\u0930"
     ));
 
     private static final Pattern TIME_PATTERN_AT = Pattern.compile(
@@ -45,32 +94,49 @@ public class TaskExtractor {
     public TaskExtractionResult extractTask(String title, String text, String packageName) {
         TaskExtractionResult result = new TaskExtractionResult();
 
-        // Filter out non-actionable apps
+        // Filter out non-actionable apps (system/media only)
         if (packageName != null && NON_ACTIONABLE_PACKAGES.contains(packageName)) {
             result.isActionable = false;
             return result;
         }
 
-        // Filter out non-actionable notification patterns
+        // Filter out non-actionable notification patterns (media, downloads, system)
         if (isNonActionableContent(title, text)) {
             result.isActionable = false;
             return result;
         }
 
-        // Check if notification content contains actionable patterns
         String combinedText = ((title != null ? title : "") + " " + (text != null ? text : "")).toLowerCase();
 
-        if (!containsActionablePattern(combinedText, packageName)) {
+        // Skip very short/empty notifications (likely just app name or single emoji)
+        if (combinedText.trim().length() < 3) {
             result.isActionable = false;
             return result;
         }
 
-        // Extract task information
-        result.isActionable = true;
-        result.taskTitle = title != null ? title : "Notification Task";
-        result.taskDescription = text != null ? text : "";
-        result.dueDateHint = extractDueDateHint(combinedText);
+        // Always actionable packages - accept without keyword check
+        if (packageName != null && ALWAYS_ACTIONABLE_PACKAGES.contains(packageName)) {
+            result.isActionable = true;
+            result.taskTitle = title != null ? title : "Notification Task";
+            result.taskDescription = text != null ? text : "";
+            result.dueDateHint = extractDueDateHint(combinedText);
+            return result;
+        }
 
+        // For other apps: accept if it has meaningful text content (> 10 chars)
+        // OR if it contains action keywords
+        boolean hasMeaningfulContent = combinedText.trim().length() > 10;
+        boolean hasActionKeyword = containsActionKeyword(combinedText);
+
+        if (hasMeaningfulContent || hasActionKeyword) {
+            result.isActionable = true;
+            result.taskTitle = title != null ? title : "Notification Task";
+            result.taskDescription = text != null ? text : "";
+            result.dueDateHint = extractDueDateHint(combinedText);
+            return result;
+        }
+
+        result.isActionable = false;
         return result;
     }
 
@@ -95,38 +161,34 @@ public class TaskExtractor {
             return true;
         }
 
+        // Generic group info notifications (WhatsApp group summaries like "5 new messages")
+        if (combined.matches(".*\\d+\\s*(new\\s*)?messages?.*") && !combined.contains(":")) {
+            return true;
+        }
+
         return false;
     }
 
-    private boolean containsActionablePattern(String combinedText, String packageName) {
-        // Calendar and email apps are inherently more actionable
-        if (packageName != null) {
-            if (packageName.contains("calendar") || packageName.contains("gmail") ||
-                    packageName.contains("email") || packageName.contains("outlook")) {
-                return true;
-            }
-        }
-
-        // Check for action keywords
+    private boolean containsActionKeyword(String combinedText) {
         for (String keyword : ACTION_KEYWORDS) {
             if (combinedText.contains(keyword)) {
                 return true;
             }
         }
-
         return false;
     }
 
     private Long extractDueDateHint(String text) {
         long now = System.currentTimeMillis();
 
-        // Check "tomorrow"
-        if (text.contains("tomorrow")) {
+        // Check "tomorrow" / "kal"
+        if (text.contains("tomorrow") || text.contains("kal") || text.contains("\u0915\u0932")) {
             return now + 24 * 60 * 60 * 1000L;
         }
 
-        // Check "today" or "EOD" or "end of day"
-        if (text.contains("today") || text.contains("eod") || text.contains("end of day")) {
+        // Check "today" or "EOD" or "end of day" or "aaj"
+        if (text.contains("today") || text.contains("eod") || text.contains("end of day") ||
+                text.contains("aaj") || text.contains("\u0906\u091C")) {
             Calendar cal = Calendar.getInstance();
             cal.set(Calendar.HOUR_OF_DAY, 23);
             cal.set(Calendar.MINUTE, 59);
