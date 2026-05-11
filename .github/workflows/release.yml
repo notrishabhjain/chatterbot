@@ -1,0 +1,101 @@
+name: Build Release APK & Create GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g. v2.0)'
+        required: true
+        default: 'v2.0'
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_NAME="${{ github.event.inputs.tag_name }}"
+          else
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          fi
+          VERSION="${TAG_NAME#v}"
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "Building release for tag: ${TAG_NAME}, version: ${VERSION}"
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.2'
+
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${GITHUB_WORKSPACE}/release-keystore.jks"
+          echo "Keystore file created at ${GITHUB_WORKSPACE}/release-keystore.jks"
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_FILE: ${{ github.workspace }}/release-keystore.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: |
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "ERROR: Release APK not found at $APK_PATH"
+            ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "Release directory does not exist"
+            exit 1
+          fi
+          cp "$APK_PATH" "TaskFlow-${{ steps.version.outputs.tag_name }}-release.apk"
+          echo "APK renamed to TaskFlow-${{ steps.version.outputs.tag_name }}-release.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag_name }}
+          name: "TaskFlow ${{ steps.version.outputs.tag_name }}"
+          body: |
+            ## TaskFlow ${{ steps.version.outputs.tag_name }}
+
+            ### Download
+            Download the signed release APK below and install it on your Android device.
+
+            ### What's New
+            - Multilingual NLP task parsing
+            - Enhanced widget functionality
+            - Bug fixes and performance improvements
+          draft: false
+          prerelease: false
+          files: |
+            TaskFlow-${{ steps.version.outputs.tag_name }}-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean up keystore
+        if: always()
+        run: rm -f "${GITHUB_WORKSPACE}/release-keystore.jks"
