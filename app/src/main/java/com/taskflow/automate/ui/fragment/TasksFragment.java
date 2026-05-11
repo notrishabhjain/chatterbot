@@ -38,6 +38,7 @@ import com.taskflow.automate.ui.TaskEditActivity;
 import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
+import com.taskflow.automate.widget.TaskWidgetProvider;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -286,6 +287,9 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         if (nextTask != null) {
                             AppDatabase.getInstance(requireContext()).taskDao().insertTask(nextTask);
                         }
+
+                        // Refresh widget to reflect completed task
+                        TaskWidgetProvider.refreshWidget(requireContext());
                     });
                 }
             }
@@ -462,6 +466,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         if (selectedDueDate[0] != null) {
                             ReminderScheduler.scheduleReminder(requireContext(), task);
                         }
+                        // Refresh widget to show newly created task
+                        TaskWidgetProvider.refreshWidget(requireContext());
                         if (getActivity() != null) {
                             getActivity().runOnUiThread(this::loadTasks);
                         }

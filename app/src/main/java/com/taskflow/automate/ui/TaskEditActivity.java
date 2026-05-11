@@ -344,26 +344,32 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     }
 
     private void populateFields() {
-        editTitle.setText(currentTask.getTitle());
-        editDescription.setText(currentTask.getDescription());
-        spinnerPriority.setSelection(currentTask.getPriority() - 1);
+        try {
+            editTitle.setText(currentTask.getTitle() != null ? currentTask.getTitle() : "");
+            editDescription.setText(currentTask.getDescription() != null ? currentTask.getDescription() : "");
 
-        if (currentTask.getDueDate() != null) {
-            selectedDueDate = currentTask.getDueDate();
-            btnPickDueDate.setText(dateFormat.format(new Date(selectedDueDate)));
-        }
+            // Clamp priority to valid spinner range [0, 2]
+            spinnerPriority.setSelection(Math.max(0, Math.min(2, currentTask.getPriority() - 1)));
 
-        // Set recurrence spinner
-        String rule = currentTask.getRecurrenceRule();
-        if (rule != null) {
-            for (int i = 0; i < RECURRENCE_VALUES.length; i++) {
-                if (rule.equals(RECURRENCE_VALUES[i])) {
-                    spinnerRecurrence.setSelection(i);
-                    break;
-                }
+            if (currentTask.getDueDate() != null) {
+                selectedDueDate = currentTask.getDueDate();
+                btnPickDueDate.setText(dateFormat.format(new Date(selectedDueDate)));
             }
-        } else {
-            spinnerRecurrence.setSelection(0);
+
+            // Set recurrence spinner
+            String rule = currentTask.getRecurrenceRule();
+            if (rule != null) {
+                for (int i = 0; i < RECURRENCE_VALUES.length; i++) {
+                    if (rule.equals(RECURRENCE_VALUES[i])) {
+                        spinnerRecurrence.setSelection(i);
+                        break;
+                    }
+                }
+            } else {
+                spinnerRecurrence.setSelection(0);
+            }
+        } catch (Exception e) {
+            // Prevent crash from unexpected data - fields will remain at defaults
         }
     }
 

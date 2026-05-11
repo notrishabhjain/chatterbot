@@ -14,6 +14,7 @@ import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
 import com.taskflow.automate.util.TaskExtractor;
+import com.taskflow.automate.widget.TaskWidgetProvider;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -185,6 +186,9 @@ public class NotificationCaptureService extends NotificationListenerService {
 
                 // Update badge count
                 BadgeUtils.updateBadgeCount(getApplicationContext());
+
+                // Refresh widget to show new task
+                TaskWidgetProvider.refreshWidget(getApplicationContext());
 
                 Log.d(TAG, "Task created: " + task.getTitle() + " (priority: " + task.getPriorityLabel() + ")");
             } catch (Exception e) {

@@ -238,34 +238,42 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 Intent intent = new Intent(Intent.ACTION_INSERT);
                 intent.setData(CalendarContract.Events.CONTENT_URI);
 
-                // Use description as event title if available (notification title is often sender name)
-                String eventTitle;
-                if (task.getDescription() != null && !task.getDescription().isEmpty()) {
-                    eventTitle = task.getDescription();
-                } else {
-                    eventTitle = task.getTitle();
-                }
+                // Always use task title as calendar event title
+                String eventTitle = task.getTitle() != null ? task.getTitle() : "";
                 // Truncate if too long for calendar title
                 if (eventTitle.length() > 100) {
                     eventTitle = eventTitle.substring(0, 97) + "...";
                 }
-
                 intent.putExtra(CalendarContract.Events.TITLE, eventTitle);
 
-                // Put the full context in description
-                String eventDescription = "Task: " + task.getTitle();
+                // Build a comprehensive description with all task details
+                StringBuilder descBuilder = new StringBuilder();
                 if (task.getDescription() != null && !task.getDescription().isEmpty()) {
-                    eventDescription += "\n\n" + task.getDescription();
+                    descBuilder.append(task.getDescription());
+                    descBuilder.append("\n\n");
                 }
                 if (task.getSourceApp() != null && !task.getSourceApp().isEmpty()) {
-                    eventDescription += "\n\nSource: " + task.getSourceApp();
+                    descBuilder.append("Source: ").append(task.getSourceApp()).append("\n");
                 }
-                eventDescription += "\nPriority: " + task.getPriorityLabel();
-                intent.putExtra(CalendarContract.Events.DESCRIPTION, eventDescription);
+                descBuilder.append("Priority: ").append(task.getPriorityLabel());
+                if (task.getAssignee() != null && !task.getAssignee().isEmpty()) {
+                    descBuilder.append("\nAssignee: ").append(task.getAssignee());
+                }
+                intent.putExtra(CalendarContract.Events.DESCRIPTION, descBuilder.toString());
 
-                long startTime = task.getDueDate() != null ? task.getDueDate() : System.currentTimeMillis();
+                // Set start time from due date, or current time + 1 hour if no due date
+                long startTime;
+                if (task.getDueDate() != null) {
+                    startTime = task.getDueDate();
+                } else {
+                    startTime = System.currentTimeMillis() + (60 * 60 * 1000L);
+                }
                 intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTime);
-                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTime + 60 * 60 * 1000);
+                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTime + (60 * 60 * 1000L));
+
+                // Add a default reminder
+                intent.putExtra(CalendarContract.Events.HAS_ALARM, 1);
+
                 try {
                     context.startActivity(intent);
                 } catch (ActivityNotFoundException e) {
