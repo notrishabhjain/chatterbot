@@ -1,6 +1,8 @@
 package com.taskflow.automate.ui;
 
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.AdapterView;
@@ -18,6 +20,9 @@ import com.google.android.material.card.MaterialCardView;
 import com.taskflow.automate.R;
 import com.taskflow.automate.util.PreferenceManager;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 public class SettingsActivity extends AppCompatActivity {
@@ -106,24 +111,53 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void setupAppToggles() {
         containerAppToggles = findViewById(R.id.container_app_toggles);
-        Set<String> knownApps = preferenceManager.getKnownApps();
         Set<String> blockedApps = preferenceManager.getBlockedApps();
 
-        if (knownApps.isEmpty()) {
+        PackageManager pm = getPackageManager();
+        List<ApplicationInfo> allApps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+
+        // Filter to user-installed apps + common messaging/productivity apps
+        List<ApplicationInfo> relevantApps = new ArrayList<>();
+        for (ApplicationInfo appInfo : allApps) {
+            // Include if it's a user-installed app (not pure system)
+            // OR if it has a launcher intent (user-visible app)
+            boolean isUserApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0;
+            boolean hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null;
+
+            // Skip our own app
+            if ("com.taskflow.automate".equals(appInfo.packageName)) {
+                continue;
+            }
+
+            if (isUserApp || hasLauncher) {
+                relevantApps.add(appInfo);
+            }
+        }
+
+        // Sort alphabetically by app label
+        Collections.sort(relevantApps, (a, b) -> {
+            String labelA = pm.getApplicationLabel(a).toString();
+            String labelB = pm.getApplicationLabel(b).toString();
+            return labelA.compareToIgnoreCase(labelB);
+        });
+
+        if (relevantApps.isEmpty()) {
             TextView noApps = new TextView(this);
-            noApps.setText("No notification sources detected yet.");
+            noApps.setText("No apps found.");
             noApps.setTextColor(getResources().getColor(R.color.textSecondary, getTheme()));
             containerAppToggles.addView(noApps);
             return;
         }
 
-        for (String packageName : knownApps) {
+        for (ApplicationInfo appInfo : relevantApps) {
+            String packageName = appInfo.packageName;
+
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.HORIZONTAL);
             row.setPadding(0, 16, 0, 16);
 
             TextView label = new TextView(this);
-            label.setText(getAppLabel(packageName));
+            label.setText(pm.getApplicationLabel(appInfo).toString());
             label.setTextSize(16);
             label.setTextColor(getResources().getColor(R.color.textPrimary, getTheme()));
             LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(
@@ -145,17 +179,6 @@ public class SettingsActivity extends AppCompatActivity {
             row.addView(label);
             row.addView(toggle);
             containerAppToggles.addView(row);
-        }
-    }
-
-    private String getAppLabel(String packageName) {
-        try {
-            return getPackageManager()
-                    .getApplicationLabel(
-                            getPackageManager().getApplicationInfo(packageName, 0))
-                    .toString();
-        } catch (Exception e) {
-            return packageName;
         }
     }
 

@@ -201,9 +201,32 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 Context context = itemView.getContext();
                 Intent intent = new Intent(Intent.ACTION_INSERT);
                 intent.setData(CalendarContract.Events.CONTENT_URI);
-                intent.putExtra(CalendarContract.Events.TITLE, task.getTitle());
-                intent.putExtra(CalendarContract.Events.DESCRIPTION,
-                        task.getDescription() != null ? task.getDescription() : "");
+
+                // Use description as event title if available (notification title is often sender name)
+                String eventTitle;
+                if (task.getDescription() != null && !task.getDescription().isEmpty()) {
+                    eventTitle = task.getDescription();
+                } else {
+                    eventTitle = task.getTitle();
+                }
+                // Truncate if too long for calendar title
+                if (eventTitle.length() > 100) {
+                    eventTitle = eventTitle.substring(0, 97) + "...";
+                }
+
+                intent.putExtra(CalendarContract.Events.TITLE, eventTitle);
+
+                // Put the full context in description
+                String eventDescription = "Task: " + task.getTitle();
+                if (task.getDescription() != null && !task.getDescription().isEmpty()) {
+                    eventDescription += "\n\n" + task.getDescription();
+                }
+                if (task.getSourceApp() != null && !task.getSourceApp().isEmpty()) {
+                    eventDescription += "\n\nSource: " + task.getSourceApp();
+                }
+                eventDescription += "\nPriority: " + task.getPriorityLabel();
+                intent.putExtra(CalendarContract.Events.DESCRIPTION, eventDescription);
+
                 long startTime = task.getDueDate() != null ? task.getDueDate() : System.currentTimeMillis();
                 intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTime);
                 intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTime + 60 * 60 * 1000);

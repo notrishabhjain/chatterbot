@@ -82,6 +82,8 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="com.taskflow.automate.WIDGET_COMPLETE_TASK" />
             </intent-filter>
             <meta-data
