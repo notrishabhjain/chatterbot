@@ -343,7 +343,6 @@ public class TranscriptTranslator {
         map.put("hai", "is");
         map.put("hain", "are");
         map.put("tha", "was");
-        map.put("the", "were");
         map.put("hoga", "will be");
         map.put("hogi", "will be");
         map.put("padega", "will have to");
@@ -365,7 +364,6 @@ public class TranscriptTranslator {
         map.put("bata", "tell");
         map.put("batana", "to tell");
         map.put("dena", "to give");
-        map.put("do", "give");
         map.put("de", "give");
         map.put("lena", "to take");
         map.put("lo", "take");
@@ -395,7 +393,6 @@ public class TranscriptTranslator {
         map.put("lekin", "but");
         map.put("agar", "if");
         map.put("toh", "then");
-        map.put("to", "then");
         map.put("jaldi", "urgently");
         map.put("zaroori", "important");
         map.put("zaruri", "important");
@@ -416,7 +413,6 @@ public class TranscriptTranslator {
         map.put("bahut", "very");
         map.put("thoda", "a little");
         map.put("bilkul", "absolutely");
-        map.put("main", "I");
         map.put("tum", "you");
         map.put("hum", "we");
         map.put("woh", "they");

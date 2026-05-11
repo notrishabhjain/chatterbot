@@ -302,11 +302,11 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         innerLayout.addView(bulkActionBar, barParams);
     }
 
-    private void enterSelectionMode(int initialPosition) {
+    private void enterSelectionMode(Task initialTask) {
         isSelectionMode = true;
         taskAdapter.setSelectionMode(true);
-        taskAdapter.getSelectedPositions().add(initialPosition);
-        taskAdapter.notifyItemChanged(initialPosition);
+        taskAdapter.getSelectedIds().add(initialTask.getId());
+        taskAdapter.notifyDataSetChanged();
         bulkActionBar.setVisibility(View.VISIBLE);
         fabAddTask.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
         updateSelectedCount();
@@ -327,7 +327,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
     @Override
     public void onTaskLongClick(Task task, int position) {
         if (!isSelectionMode) {
-            enterSelectionMode(position);
+            enterSelectionMode(task);
         }
     }
 

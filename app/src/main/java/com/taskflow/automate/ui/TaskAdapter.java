@@ -64,7 +64,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     // Selection mode fields
     private boolean selectionMode = false;
-    private Set<Integer> selectedPositions = new HashSet<>();
+    private Set<Long> selectedIds = new HashSet<>();
 
     public TaskAdapter(List<Task> tasks, OnTaskCompleteListener listener) {
         this.tasks = tasks;
@@ -96,7 +96,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     public void setSelectionMode(boolean enabled) {
         this.selectionMode = enabled;
         if (!enabled) {
-            selectedPositions.clear();
+            selectedIds.clear();
         }
         notifyDataSetChanged();
     }
@@ -105,35 +105,35 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         return selectionMode;
     }
 
-    public Set<Integer> getSelectedPositions() {
-        return selectedPositions;
+    public Set<Long> getSelectedIds() {
+        return selectedIds;
     }
 
     public List<Task> getSelectedTasks() {
         List<Task> selected = new ArrayList<>();
-        for (int pos : selectedPositions) {
-            if (pos >= 0 && pos < tasks.size()) {
-                selected.add(tasks.get(pos));
+        for (Task task : tasks) {
+            if (selectedIds.contains(task.getId())) {
+                selected.add(task);
             }
         }
         return selected;
     }
 
     public void selectAll() {
-        selectedPositions.clear();
-        for (int i = 0; i < tasks.size(); i++) {
-            selectedPositions.add(i);
+        selectedIds.clear();
+        for (Task task : tasks) {
+            selectedIds.add(task.getId());
         }
         notifyDataSetChanged();
     }
 
     public void deselectAll() {
-        selectedPositions.clear();
+        selectedIds.clear();
         notifyDataSetChanged();
     }
 
     public int getSelectedCount() {
-        return selectedPositions.size();
+        return selectedIds.size();
     }
 
     @NonNull
@@ -219,16 +219,16 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             // Handle selection mode
             if (selectionMode) {
                 checkboxSelect.setVisibility(View.VISIBLE);
-                checkboxSelect.setChecked(selectedPositions.contains(position));
+                checkboxSelect.setChecked(selectedIds.contains(task.getId()));
                 checkboxSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
                     if (isChecked) {
-                        selectedPositions.add(position);
+                        selectedIds.add(task.getId());
                     } else {
-                        selectedPositions.remove(position);
+                        selectedIds.remove(task.getId());
                     }
                 });
                 // Highlight selected items
-                if (selectedPositions.contains(position)) {
+                if (selectedIds.contains(task.getId())) {
                     itemView.setAlpha(0.85f);
                 } else {
                     itemView.setAlpha(1.0f);
@@ -370,11 +370,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             // Click handling: in selection mode, toggle selection; otherwise open detail
             itemView.setOnClickListener(v -> {
                 if (selectionMode) {
-                    boolean isSelected = selectedPositions.contains(position);
+                    boolean isSelected = selectedIds.contains(task.getId());
                     if (isSelected) {
-                        selectedPositions.remove(position);
+                        selectedIds.remove(task.getId());
                     } else {
-                        selectedPositions.add(position);
+                        selectedIds.add(task.getId());
                     }
                     notifyItemChanged(position);
                 } else {

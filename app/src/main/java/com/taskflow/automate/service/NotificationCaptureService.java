@@ -120,25 +120,23 @@ public class NotificationCaptureService extends NotificationListenerService {
         String title = extras.getString(Notification.EXTRA_TITLE);
         String text = extras.getString(Notification.EXTRA_TEXT);
 
-        // Extract richer context from notification extras
-        String enhancedDescription = buildEnhancedDescription(text, extras);
-
         // For messaging apps: use title as sender/assignee
         String senderName = null;
         if (MESSAGING_APPS.contains(packageName)) {
             senderName = title;
         }
 
-        // For email apps: title is the sender, text has subject - swap
+        // For email apps: title is the sender, text has subject - swap BEFORE building description
         if (EMAIL_APPS.contains(packageName)) {
             senderName = title;
             // Use text as title (subject line) for email notifications
             if (text != null && !text.isEmpty()) {
-                String emailSubject = text;
-                // If text contains ":", the part before might be subject
-                title = emailSubject;
+                title = text;
             }
         }
+
+        // Extract richer context from notification extras (after email swap so text/title are correct)
+        String enhancedDescription = buildEnhancedDescription(text, extras);
 
         // Skip if both title and text are empty
         if ((title == null || title.isEmpty()) && (text == null || text.isEmpty())) {
@@ -278,6 +276,10 @@ public class NotificationCaptureService extends NotificationListenerService {
                     SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
                     String timeStr = sdf.format(new Date(System.currentTimeMillis()));
                     String newInfo = result.taskDescription != null ? result.taskDescription : "";
+                    // Cap description length to prevent unbounded growth
+                    if (existingDesc.length() > 2000) {
+                        existingDesc = existingDesc.substring(existingDesc.length() - 1500);
+                    }
                     String updatedDesc = existingDesc + "\n[" + timeStr + "] " + newInfo;
                     duplicate.setDescription(updatedDesc);
                     taskDao.updateTask(duplicate);
@@ -347,6 +349,10 @@ public class NotificationCaptureService extends NotificationListenerService {
                     String existingDesc = task.getDescription() != null ? task.getDescription() : "";
                     SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
                     String timeStr = sdf.format(new Date(timestamp));
+                    // Cap description length to prevent unbounded growth
+                    if (existingDesc.length() > 2000) {
+                        existingDesc = existingDesc.substring(existingDesc.length() - 1500);
+                    }
                     String updatedDesc = existingDesc + "\n[" + timeStr + "] " + newText;
                     task.setDescription(updatedDesc);
                     taskDao.updateTask(task);
