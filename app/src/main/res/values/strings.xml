@@ -181,4 +181,15 @@
     <string name="add_subtask">+ Add Subtask</string>
     <string name="subtask_progress">%d/%d done</string>
     <string name="enter_subtask_title">Enter subtask title</string>
+
+    <!-- Quick Add -->
+    <string name="quick_add_notification_title">TaskFlow Quick Add</string>
+    <string name="quick_add_hint">Add a task...</string>
+    <string name="quick_add_channel_name">Quick Add Tasks</string>
+    <string name="task_added_confirmation">Task added</string>
+    <string name="quick_add_enabled_label">Quick Add Notification</string>
+
+    <!-- Weekly Summary -->
+    <string name="weekly_summary_title">Weekly Task Summary</string>
+    <string name="weekly_summary_body">You have %d pending tasks, %d overdue, %d completed this week</string>
 </resources>

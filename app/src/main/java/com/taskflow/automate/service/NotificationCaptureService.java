@@ -15,18 +15,35 @@ import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
 import com.taskflow.automate.util.TaskExtractor;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class NotificationCaptureService extends NotificationListenerService {
 
     private static final String TAG = "NotificationCapture";
+    private static final long DEDUP_WINDOW_MS = 5 * 60 * 1000L; // 5 minutes
 
     private TaskExtractor taskExtractor;
     private PriorityAssigner priorityAssigner;
     private PreferenceManager preferenceManager;
     private ExecutorService executorService;
+    private final ConcurrentHashMap<String, DeduplicationEntry> deduplicationMap = new ConcurrentHashMap<>();
+
+    private static class DeduplicationEntry {
+        long taskId;
+        long timestamp;
+
+        DeduplicationEntry(long taskId, long timestamp) {
+            this.taskId = taskId;
+            this.timestamp = timestamp;
+        }
+    }
 
     @Override
     public void onCreate() {
@@ -89,9 +106,24 @@ public class NotificationCaptureService extends NotificationListenerService {
             return;
         }
 
+        // Smart deduplication - check if same sender sent within 5 minutes
+        String deduplicationKey = packageName + "|" + (title != null ? title : "");
+        DeduplicationEntry existingEntry = deduplicationMap.get(deduplicationKey);
+        long now = System.currentTimeMillis();
+
+        if (existingEntry != null && (now - existingEntry.timestamp) < DEDUP_WINDOW_MS) {
+            // Append to existing task instead of creating new one
+            appendToExistingTask(existingEntry.taskId, text, now);
+            existingEntry.timestamp = now; // Update timestamp
+            return;
+        }
+
+        // Clean up old entries
+        cleanupDeduplicationMap();
+
         // Create and persist the task
         String notificationKey = sbn.getKey();
-        createAndPersistTask(result, packageName, notificationKey);
+        createAndPersistTask(result, packageName, notificationKey, deduplicationKey);
     }
 
     @Override
@@ -105,7 +137,8 @@ public class NotificationCaptureService extends NotificationListenerService {
     }
 
     private void createAndPersistTask(TaskExtractor.TaskExtractionResult result,
-                                       String packageName, String notificationKey) {
+                                       String packageName, String notificationKey,
+                                       String deduplicationKey) {
         executorService.execute(() -> {
             try {
                 TaskDao taskDao = AppDatabase.getInstance(getApplicationContext()).taskDao();
@@ -139,6 +172,9 @@ public class NotificationCaptureService extends NotificationListenerService {
                 long taskId = taskDao.insertTask(task);
                 task.setId(taskId);
 
+                // Track for deduplication
+                deduplicationMap.put(deduplicationKey, new DeduplicationEntry(taskId, System.currentTimeMillis()));
+
                 // Schedule reminder
                 ReminderScheduler.scheduleReminder(getApplicationContext(), task);
 
@@ -150,5 +186,34 @@ public class NotificationCaptureService extends NotificationListenerService {
                 Log.e(TAG, "Error creating task", e);
             }
         });
+    }
+
+    private void appendToExistingTask(long taskId, String newText, long timestamp) {
+        if (newText == null || newText.isEmpty()) return;
+        executorService.execute(() -> {
+            try {
+                TaskDao taskDao = AppDatabase.getInstance(getApplicationContext()).taskDao();
+                Task task = taskDao.getTaskById(taskId);
+                if (task != null && "pending".equals(task.getStatus())) {
+                    String existingDesc = task.getDescription() != null ? task.getDescription() : "";
+                    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                    String timeStr = sdf.format(new Date(timestamp));
+                    String updatedDesc = existingDesc + "\n[" + timeStr + "] " + newText;
+                    task.setDescription(updatedDesc);
+                    taskDao.updateTask(task);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error appending to task", e);
+            }
+        });
+    }
+
+    private void cleanupDeduplicationMap() {
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, DeduplicationEntry> entry : deduplicationMap.entrySet()) {
+            if (now - entry.getValue().timestamp > DEDUP_WINDOW_MS) {
+                deduplicationMap.remove(entry.getKey());
+            }
+        }
     }
 }

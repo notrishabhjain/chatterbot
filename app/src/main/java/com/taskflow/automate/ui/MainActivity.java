@@ -20,6 +20,7 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.taskflow.automate.R;
+import com.taskflow.automate.receiver.QuickAddReceiver;
 import com.taskflow.automate.service.NotificationCaptureService;
 import com.taskflow.automate.ui.fragment.ImportFragment;
 import com.taskflow.automate.ui.fragment.MoreFragment;
@@ -29,6 +30,7 @@ import com.taskflow.automate.ui.fragment.TodayFragment;
 import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.worker.PriorityEscalationWorker;
+import com.taskflow.automate.worker.WeeklySummaryWorker;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -51,6 +53,12 @@ public class MainActivity extends AppCompatActivity {
         checkNotificationListenerPermission();
         requestPostNotificationPermission();
         PriorityEscalationWorker.scheduleEscalation(this);
+        WeeklySummaryWorker.scheduleWeeklySummary(this);
+
+        PreferenceManager prefManager = new PreferenceManager(this);
+        if (prefManager.isQuickAddEnabled()) {
+            QuickAddReceiver.showQuickAddNotification(this);
+        }
 
         if (savedInstanceState == null) {
             loadFragment(new TodayFragment());

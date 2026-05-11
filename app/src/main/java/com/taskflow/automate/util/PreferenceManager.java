@@ -23,6 +23,7 @@ public class PreferenceManager {
     private static final String KEY_EMAIL_PASSWORD = "email_password";
     private static final String KEY_EMAIL_RECIPIENT = "email_recipient";
     private static final String KEY_EMAIL_FREQUENCY = "email_frequency";
+    private static final String KEY_QUICK_ADD_ENABLED = "quick_add_enabled";
 
     private static final int DEFAULT_HIGH_INTERVAL = 30;
     private static final int DEFAULT_MEDIUM_INTERVAL = 60;
@@ -144,5 +145,13 @@ public class PreferenceManager {
 
     public void setEmailFrequency(String frequency) {
         prefs.edit().putString(KEY_EMAIL_FREQUENCY, frequency).apply();
+    }
+
+    public boolean isQuickAddEnabled() {
+        return prefs.getBoolean(KEY_QUICK_ADD_ENABLED, true);
+    }
+
+    public void setQuickAddEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_QUICK_ADD_ENABLED, enabled).apply();
     }
 }
