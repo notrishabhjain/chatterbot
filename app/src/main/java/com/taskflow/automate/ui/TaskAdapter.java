@@ -219,6 +219,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             // Handle selection mode
             if (selectionMode) {
                 checkboxSelect.setVisibility(View.VISIBLE);
+                // Null the listener before setting checked state to prevent
+                // stale listeners from firing on recycled ViewHolders
+                checkboxSelect.setOnCheckedChangeListener(null);
                 checkboxSelect.setChecked(selectedIds.contains(task.getId()));
                 checkboxSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
                     if (isChecked) {

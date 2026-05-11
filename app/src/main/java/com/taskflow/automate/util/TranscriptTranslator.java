@@ -4,9 +4,11 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * On-device Hindi/Hinglish to English translator using dictionary and phrase-based approach.
@@ -195,18 +197,38 @@ public class TranscriptTranslator {
 
     private boolean hasRomanizedHindiMarkers(String sentence) {
         String lower = sentence.toLowerCase(Locale.US);
+        // Split into individual words and use set membership to avoid
+        // substring false positives (e.g., "hai" in "chair", "tak" in "take")
+        String[] words = lower.split("\\s+");
+        Set<String> wordSet = new HashSet<>();
+        for (String word : words) {
+            // Strip trailing punctuation for matching
+            if (word.matches(".*[.,;:!?]$")) {
+                word = word.substring(0, word.length() - 1);
+            }
+            wordSet.add(word);
+        }
+
         String[] hindiMarkers = {
             "karo", "karna", "hai", "hoga", "padega", "chahiye",
             "mujhe", "tumhe", "hume", "aapko", "usko",
-            "bhej", "dekh", "bata", "kar do", "bhej do",
+            "bhej", "dekh", "bata",
             "kal", "aaj", "abhi", "tak", "mein",
             "karunga", "karungi", "karenge", "dena", "lena"
         };
 
         int markerCount = 0;
         for (String marker : hindiMarkers) {
-            if (lower.contains(marker)) {
-                markerCount++;
+            if (marker.contains(" ")) {
+                // Multi-word markers: check if the phrase exists in the original string
+                if (lower.contains(marker)) {
+                    markerCount++;
+                }
+            } else {
+                // Single-word markers: check as complete words in the set
+                if (wordSet.contains(marker)) {
+                    markerCount++;
+                }
             }
         }
         return markerCount >= 2;
