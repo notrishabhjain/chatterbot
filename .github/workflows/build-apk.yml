@@ -1,4 +1,4 @@
-name: Build & Release APK
+name: Build Release APK
 
 on:
   push:
@@ -50,48 +50,18 @@ jobs:
         with:
           gradle-version: '8.2'
 
-      - name: Decode keystore
-        id: keystore
-        run: |
-          if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            mkdir -p build
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > build/release-keystore.jks
-            echo "signed=true" >> $GITHUB_OUTPUT
-          else
-            echo "signed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Build signed Release APK
-        if: steps.keystore.outputs.signed == 'true'
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      - name: Build Release APK
         run: gradle assembleRelease --no-daemon
 
-      - name: Build Debug APK (no signing keys configured)
-        if: steps.keystore.outputs.signed != 'true'
-        run: gradle assembleDebug --no-daemon
-
       - name: Upload Release APK
-        if: steps.keystore.outputs.signed == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: TaskFlow-v2.0-release
           path: app/build/outputs/apk/release/app-release.apk
           retention-days: 90
 
-      - name: Upload Debug APK (fallback)
-        if: steps.keystore.outputs.signed != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: TaskFlow-v2.0-debug
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 90
-
       - name: Create GitHub Release
-        if: steps.keystore.outputs.signed == 'true' && github.event_name == 'push'
+        if: github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v2.0.${{ github.run_number }}
@@ -100,9 +70,12 @@ jobs:
             ## TaskFlow v2.0
 
             Full-featured intelligent task automation for Android.
-
-            Download the APK below and install on any Android 8.0+ device.
-            Enable "Install from unknown sources" if prompted.
+            
+            ### Install
+            1. Download `app-release.apk` below
+            2. Transfer to your Android 8.0+ device
+            3. Enable "Install from unknown sources" if prompted
+            4. Install and grant Notification Access when asked
           files: app/build/outputs/apk/release/app-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
