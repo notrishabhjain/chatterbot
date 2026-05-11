@@ -50,24 +50,17 @@ jobs:
         with:
           gradle-version: '8.2'
 
-      - name: Decode keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > "${GITHUB_WORKSPACE}/release-keystore.jks"
-          echo "Keystore file created at ${GITHUB_WORKSPACE}/release-keystore.jks"
-
       - name: Build Release APK
-        env:
-          KEYSTORE_FILE: ${{ github.workspace }}/release-keystore.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon
 
       - name: Rename APK
         run: |
-          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          APK_PATH="app/build/outputs/apk/release/app-release-unsigned.apk"
           if [ ! -f "$APK_PATH" ]; then
-            echo "ERROR: Release APK not found at $APK_PATH"
+            APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          fi
+          if [ ! -f "$APK_PATH" ]; then
+            echo "ERROR: Release APK not found"
             ls -la app/build/outputs/apk/release/ 2>/dev/null || echo "Release directory does not exist"
             exit 1
           fi
@@ -83,11 +76,13 @@ jobs:
             ## TaskFlow ${{ steps.version.outputs.tag_name }}
 
             ### Download
-            Download the signed release APK below and install it on your Android device.
+            Download the release APK below and install it on your Android device (enable "Install from unknown sources").
 
             ### What's New
-            - Multilingual NLP task parsing
-            - Enhanced widget functionality
+            - Intelligent multilingual NLP task extraction (Hindi, English, Hinglish)
+            - Fixed widget - tap tasks to open details
+            - Fixed app crash when viewing task details
+            - 200+ expanded trigger keywords
             - Bug fixes and performance improvements
           draft: false
           prerelease: false
@@ -95,7 +90,3 @@ jobs:
             TaskFlow-${{ steps.version.outputs.tag_name }}-release.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Clean up keystore
-        if: always()
-        run: rm -f "${GITHUB_WORKSPACE}/release-keystore.jks"
