@@ -52,7 +52,7 @@ public class TaskExtractor {
     ));
 
     private static final Set<String> ACTION_KEYWORDS = new HashSet<>(Arrays.asList(
-            // English
+            // English - basic action words
             "please", "need", "review", "approve", "submit", "send",
             "complete", "follow up", "follow-up", "action required",
             "respond", "reply", "confirm", "schedule", "attend",
@@ -61,7 +61,7 @@ public class TaskExtractor {
             "check", "update", "share", "prepare", "fix",
             "look into", "get back", "let me know", "can you",
             "could you", "would you", "will you", "make sure",
-            // New English action words
+            // English - workplace/professional action words
             "assign", "deliver", "coordinate", "arrange", "organize",
             "handle", "resolve", "investigate", "implement", "finalize",
             "prioritize", "escalate", "document", "test", "deploy",
@@ -72,13 +72,34 @@ public class TaskExtractor {
             "purchase", "return", "exchange", "pickup", "drop",
             "collect", "submit", "register", "apply", "renew",
             "cancel", "reschedule",
-            // Hindi (transliterated)
+            // English - expanded professional/personal action words
+            "delegate", "authorize", "negotiate", "brainstorm", "audit",
+            "certify", "troubleshoot", "diagnose", "maintain", "transport",
+            "ship", "dispatch", "procure", "onboard", "interview",
+            "shortlist", "promote", "counsel", "mediate", "archive",
+            "digitize", "scan", "print", "courier", "notarize",
+            "sign", "endorse", "execute", "initiate", "evaluate",
+            "assess", "analyze", "research", "develop", "design",
+            "prototype", "benchmark", "standardize", "optimize", "automate",
+            "consolidate", "streamline", "facilitate", "moderate", "supervise",
+            "oversee", "inspect", "reject", "amend", "revise",
+            "draft", "publish", "distribute", "circulate", "broadcast",
+            "announce", "notify", "alert", "warn", "collaborate",
+            "volunteer", "nominate", "recommend", "propose", "strategize",
+            "forecast", "estimate", "quote", "bid", "tender",
+            "requisition", "reimburse", "compensate", "fund", "sponsor",
+            "invest", "divest", "liquidate", "comply", "enforce",
+            "regulate", "sanction", "penalize", "waive", "exempt",
+            "override", "defer", "postpone", "adjourn", "suspend",
+            "resume", "proceed", "advance", "expedite", "accelerate",
+            "fast-track",
+            // Hindi (transliterated) - basic
             "karo", "karna", "bhejo", "dekho", "batao", "kar do",
             "kar dena", "bhej do", "bhej dena", "check karo",
             "reply karo", "send karo", "complete karo", "jaldi",
             "zaruri", "zaroori", "jaruri", "important hai",
             "kal tak", "aaj", "abhi", "turant",
-            // New Hindi/Hinglish transliterated words
+            // Hindi (transliterated) - expanded
             "bhejna", "dekhna", "banana", "likhna", "padhna",
             "samjhana", "sikhana", "baat karo", "discuss karo",
             "plan karo", "decide karo", "book karo", "order karo",
@@ -87,13 +108,22 @@ public class TaskExtractor {
             "download karo", "setup karo", "fix karo", "resolve karo",
             "test karo", "deploy karo", "jama karo", "collect karo",
             "submit karo", "prepare karo", "arrange karo",
-            // Hindi (Unicode)
+            // Hindi (transliterated) - new expanded
+            "samjho", "seekho", "suno", "padho", "likho",
+            "gino", "jodo", "todo", "hatao", "uthao",
+            "rakh do", "le aao", "de do", "bana do", "dikha do",
+            "bhej do", "le lo", "ruk jao", "chalo", "shuru karo",
+            "band karo", "khatam karo", "pura karo", "jaldi karo",
+            "dhyan do", "socho", "vichar karo", "jaanch karo",
+            "parkho", "tayaar karo", "saaf karo", "theek karo",
+            "badal do", "sudhar do", "milao", "baithak karo", "charcha karo",
+            // Hindi (Unicode) - basic
             "\u0915\u0930\u094B", "\u0915\u0930\u0928\u093E", "\u092D\u0947\u091C\u094B",
             "\u0926\u0947\u0916\u094B", "\u092C\u0924\u093E\u0913",
             "\u091C\u0930\u0942\u0930\u0940", "\u091C\u0932\u094D\u0926\u0940",
             "\u092E\u0940\u091F\u093F\u0902\u0917", "\u0915\u0949\u0932",
             "\u092F\u093E\u0926", "\u0930\u093F\u092E\u093E\u0907\u0902\u0921\u0930",
-            // New Hindi Unicode keywords
+            // Hindi (Unicode) - expanded existing
             "\u092D\u0947\u091C\u0928\u093E", "\u0926\u0947\u0916\u0928\u093E",
             "\u092C\u0928\u093E\u0928\u093E", "\u0932\u093F\u0916\u0928\u093E",
             "\u092A\u0922\u093C\u0928\u093E", "\u0938\u092E\u091D\u093E\u0928\u093E",
@@ -101,7 +131,55 @@ public class TaskExtractor {
             "\u0911\u0930\u094D\u0921\u0930", "\u092A\u0947\u092E\u0947\u0902\u091F",
             "\u091F\u094D\u0930\u093E\u0902\u0938\u092B\u0930", "\u0905\u092A\u0921\u0947\u091F",
             "\u0907\u0902\u0938\u094D\u091F\u0949\u0932", "\u0921\u093E\u0909\u0928\u0932\u094B\u0921",
-            "\u0924\u0948\u092F\u093E\u0930", "\u091C\u092E\u093E", "\u0938\u092C\u092E\u093F\u091F"
+            "\u0924\u0948\u092F\u093E\u0930", "\u091C\u092E\u093E", "\u0938\u092C\u092E\u093F\u091F",
+            // Hindi (Unicode) - new expanded keywords
+            "\u0938\u092E\u091D\u094B",       // समझो
+            "\u0938\u0940\u0916\u094B",       // सीखो
+            "\u0938\u0941\u0928\u094B",       // सुनो
+            "\u092A\u0922\u093C\u094B",       // पढ़ो
+            "\u0932\u093F\u0916\u094B",       // लिखो
+            "\u0917\u093F\u0928\u094B",       // गिनो
+            "\u091C\u094B\u0921\u093C\u094B", // जोड़ो
+            "\u0924\u094B\u0921\u093C\u094B", // तोड़ो
+            "\u0939\u091F\u093E\u0913",       // हटाओ
+            "\u0909\u0920\u093E\u0913",       // उठाओ
+            "\u0930\u0916 \u0926\u094B",      // रख दो
+            "\u0932\u0947 \u0906\u0913",      // ले आओ
+            "\u0926\u0947 \u0926\u094B",      // दे दो
+            "\u092C\u0928\u093E \u0926\u094B", // बना दो
+            "\u0926\u093F\u0916\u093E \u0926\u094B", // दिखा दो
+            "\u0930\u0941\u0915 \u091C\u093E\u0913", // रुक जाओ
+            "\u091A\u0932\u094B",             // चलो
+            "\u0936\u0941\u0930\u0942 \u0915\u0930\u094B", // शुरू करो
+            "\u092C\u0902\u0926 \u0915\u0930\u094B", // बंद करो
+            "\u0916\u0924\u094D\u092E \u0915\u0930\u094B", // खत्म करो
+            "\u092A\u0942\u0930\u093E \u0915\u0930\u094B", // पूरा करो
+            "\u091C\u0932\u094D\u0926\u0940 \u0915\u0930\u094B", // जल्दी करो
+            "\u0927\u094D\u092F\u093E\u0928 \u0926\u094B", // ध्यान दो
+            "\u0938\u094B\u091A\u094B",       // सोचो
+            "\u0935\u093F\u091A\u093E\u0930 \u0915\u0930\u094B", // विचार करो
+            "\u091C\u093E\u0902\u091A \u0915\u0930\u094B", // जांच करो
+            "\u092A\u0930\u0916\u094B",       // परखो
+            "\u0924\u0948\u092F\u093E\u0930 \u0915\u0930\u094B", // तैयार करो
+            "\u0938\u093E\u092B \u0915\u0930\u094B", // साफ करो
+            "\u0920\u0940\u0915 \u0915\u0930\u094B", // ठीक करो
+            "\u092C\u0926\u0932 \u0926\u094B", // बदल दो
+            "\u0938\u0941\u0927\u093E\u0930 \u0926\u094B", // सुधार दो
+            "\u092E\u093F\u0932\u093E\u0913", // मिलाओ
+            "\u092C\u0948\u0920\u0915 \u0915\u0930\u094B", // बैठक करो
+            "\u091A\u0930\u094D\u091A\u093E \u0915\u0930\u094B", // चर्चा करो
+            // Hinglish combination phrases
+            "meeting schedule karo", "report banana hai", "presentation ready karo",
+            "deadline extend karo", "budget approve karo", "vendor contact karo",
+            "client ko call karo", "team ko inform karo", "data analyze karo",
+            "feedback collect karo", "document sign karo", "invoice raise karo",
+            "payment process karo", "ticket raise karo", "issue escalate karo",
+            "code review karo", "PR merge karo", "branch create karo",
+            "deploy karo", "backup le lo", "server restart karo",
+            "database migrate karo", "API integrate karo", "testing complete karo",
+            "documentation update karo", "sprint plan karo",
+            "standup mein discuss karo", "backlog groom karo",
+            "release plan karo", "hotfix deploy karo"
     ));
 
     private static final Pattern TIME_PATTERN_AT = Pattern.compile(

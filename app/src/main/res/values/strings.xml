@@ -136,6 +136,10 @@
 
     <!-- Widget -->
     <string name="widget_empty_message">No pending tasks</string>
+    <string name="widget_description">View and manage your pending tasks</string>
+
+    <!-- Error Messages -->
+    <string name="task_not_found">Task not found</string>
 
     <!-- Export -->
     <string name="export_title">Export Tasks</string>

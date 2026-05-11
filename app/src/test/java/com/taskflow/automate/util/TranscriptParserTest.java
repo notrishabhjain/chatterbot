@@ -110,4 +110,70 @@ public class TranscriptParserTest {
             }
         }
     }
+
+    // --- Enhanced capability tests ---
+
+    @Test
+    public void fullHinglishTranscript_multiSpeaker_extractsTasks() {
+        parser.setTeamMembers(Arrays.asList("Rahul", "Priya", "Amit"));
+        String transcript =
+                "Rahul: mujhe kal tak presentation ready karna hai\n" +
+                "Priya: main slides design karungi\n" +
+                "Amit: data team se numbers bhej do\n" +
+                "Rahul: deadline friday hai, jaldi karo";
+
+        List<MeetingTaskExtractor.ExtractedActionItem> results =
+                parser.parseTranscript(transcript);
+
+        assertTrue("Expected at least 3 items but got " + results.size(), results.size() >= 3);
+    }
+
+    @Test
+    public void hindiDevanagariTranscript_extractsItems() {
+        String transcript = "\u092E\u0941\u091D\u0947 \u0930\u093F\u092A\u094B\u0930\u094D\u091F \u092D\u0947\u091C\u0928\u093E \u0939\u0948 \u0915\u0932 \u0924\u0915";
+        List<MeetingTaskExtractor.ExtractedActionItem> results =
+                parser.parseTranscript(transcript);
+
+        assertFalse("Should extract at least one item from Hindi text", results.isEmpty());
+    }
+
+    @Test
+    public void implicitTasksDetected_whoWillQuestion() {
+        String transcript = "Great progress on the project.\nWho will handle the deployment?\nLet us move on.";
+        List<MeetingTaskExtractor.ExtractedActionItem> results =
+                parser.parseTranscript(transcript);
+
+        // The intelligent analyzer should detect the implicit task
+        boolean foundImplicit = false;
+        for (MeetingTaskExtractor.ExtractedActionItem item : results) {
+            if (item.title != null && item.title.toLowerCase().contains("deployment")) {
+                foundImplicit = true;
+                break;
+            }
+        }
+        assertTrue("Should detect implicit task from question", foundImplicit);
+    }
+
+    @Test
+    public void backwardCompatibility_existingTestsStillWork() {
+        // Ensure basic English parsing still works after integration
+        String transcript = "I will prepare the presentation\nAction item: review the budget";
+        List<MeetingTaskExtractor.ExtractedActionItem> results =
+                parser.parseTranscript(transcript);
+        assertTrue(results.size() >= 2);
+    }
+
+    @Test
+    public void backwardCompatibility_nullStillSafe() {
+        List<MeetingTaskExtractor.ExtractedActionItem> results = parser.parseTranscript(null);
+        assertNotNull(results);
+        assertEquals(0, results.size());
+    }
+
+    @Test
+    public void backwardCompatibility_emptyStillSafe() {
+        List<MeetingTaskExtractor.ExtractedActionItem> results = parser.parseTranscript("");
+        assertNotNull(results);
+        assertEquals(0, results.size());
+    }
 }

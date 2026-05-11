@@ -13,6 +13,7 @@ import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.ui.MainActivity;
+import com.taskflow.automate.ui.TaskEditActivity;
 import com.taskflow.automate.util.RecurringTaskManager;
 
 import java.util.concurrent.ExecutorService;
@@ -21,6 +22,7 @@ import java.util.concurrent.Executors;
 public class TaskWidgetProvider extends AppWidgetProvider {
 
     public static final String ACTION_COMPLETE_TASK = "com.taskflow.automate.WIDGET_COMPLETE_TASK";
+    public static final String ACTION_VIEW_TASK = "com.taskflow.automate.WIDGET_VIEW_TASK";
     public static final String EXTRA_TASK_ID = "extra_task_id";
 
     @Override
@@ -45,12 +47,11 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         views.setRemoteAdapter(R.id.widget_list, serviceIntent);
         views.setEmptyView(R.id.widget_list, R.id.widget_empty);
 
-        // Set up pending intent template for list item clicks (complete action)
-        Intent completeIntent = new Intent(context, TaskWidgetProvider.class);
-        completeIntent.setAction(ACTION_COMPLETE_TASK);
-        PendingIntent completePending = PendingIntent.getBroadcast(context, 0, completeIntent,
+        // Set up pending intent template for list item clicks
+        Intent templateIntent = new Intent(context, TaskWidgetProvider.class);
+        PendingIntent templatePending = PendingIntent.getBroadcast(context, 0, templateIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
-        views.setPendingIntentTemplate(R.id.widget_list, completePending);
+        views.setPendingIntentTemplate(R.id.widget_list, templatePending);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
     }
@@ -58,7 +59,16 @@ public class TaskWidgetProvider extends AppWidgetProvider {
     @Override
     public void onReceive(Context context, Intent intent) {
         super.onReceive(context, intent);
-        if (ACTION_COMPLETE_TASK.equals(intent.getAction())) {
+        String action = intent.getAction();
+        if (ACTION_VIEW_TASK.equals(action)) {
+            long taskId = intent.getLongExtra(EXTRA_TASK_ID, -1);
+            if (taskId != -1) {
+                Intent viewIntent = new Intent(context, TaskEditActivity.class);
+                viewIntent.putExtra(TaskEditActivity.EXTRA_TASK_ID, taskId);
+                viewIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                context.startActivity(viewIntent);
+            }
+        } else if (ACTION_COMPLETE_TASK.equals(action)) {
             long taskId = intent.getLongExtra(EXTRA_TASK_ID, -1);
             if (taskId != -1) {
                 ExecutorService executor = Executors.newSingleThreadExecutor();
