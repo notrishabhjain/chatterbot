@@ -75,9 +75,16 @@ public class TaskWidgetRemoteViewsFactory implements RemoteViewsService.RemoteVi
         views.setInt(R.id.widget_priority_bar, "setBackgroundColor", priorityColor);
 
         // Set fill-in intent with task ID for the complete action
-        Intent fillInIntent = new Intent();
-        fillInIntent.putExtra(TaskWidgetProvider.EXTRA_TASK_ID, task.getId());
-        views.setOnClickFillInIntent(R.id.widget_btn_complete, fillInIntent);
+        Intent completeIntent = new Intent();
+        completeIntent.setAction(TaskWidgetProvider.ACTION_COMPLETE_TASK);
+        completeIntent.putExtra(TaskWidgetProvider.EXTRA_TASK_ID, task.getId());
+        views.setOnClickFillInIntent(R.id.widget_btn_complete, completeIntent);
+
+        // Set fill-in intent on the task title to open task detail
+        Intent viewIntent = new Intent();
+        viewIntent.setAction(TaskWidgetProvider.ACTION_VIEW_TASK);
+        viewIntent.putExtra(TaskWidgetProvider.EXTRA_TASK_ID, task.getId());
+        views.setOnClickFillInIntent(R.id.widget_task_title, viewIntent);
 
         return views;
     }

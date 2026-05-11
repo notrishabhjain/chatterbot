@@ -83,6 +83,7 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
         if (taskId != -1) {
             loadTask(taskId);
         } else {
+            Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
             finish();
         }
     }
@@ -91,6 +92,27 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     protected void onDestroy() {
         super.onDestroy();
         executor.shutdown();
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        long taskId = getIntent().getLongExtra(EXTRA_TASK_ID, -1);
+        outState.putLong("saved_task_id", taskId);
+        if (selectedDueDate != null) {
+            outState.putLong("saved_due_date", selectedDueDate);
+        }
+    }
+
+    @Override
+    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState != null) {
+            long savedDueDate = savedInstanceState.getLong("saved_due_date", -1);
+            if (savedDueDate != -1) {
+                selectedDueDate = savedDueDate;
+            }
+        }
     }
 
     private void setupToolbar() {
@@ -180,7 +202,10 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
                 loadTagsForTask(taskId);
                 loadSubtasks(taskId);
             } else {
-                runOnUiThread(this::finish);
+                runOnUiThread(() -> {
+                    Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
+                    finish();
+                });
             }
         });
     }
