@@ -8,13 +8,16 @@ import java.util.List;
 public class TranscriptParser {
 
     private final MeetingTaskExtractor extractor;
+    private final IntelligentTranscriptAnalyzer intelligentAnalyzer;
 
     public TranscriptParser() {
         extractor = new MeetingTaskExtractor();
+        intelligentAnalyzer = new IntelligentTranscriptAnalyzer();
     }
 
     public void setTeamMembers(List<String> memberNames) {
         extractor.setTeamMembers(memberNames);
+        intelligentAnalyzer.setTeamMembers(memberNames);
     }
 
     /**
@@ -62,6 +65,29 @@ public class TranscriptParser {
 
         // Deduplicate by title similarity
         results = deduplicateItems(results);
+
+        // Second pass: Use IntelligentTranscriptAnalyzer for additional detection
+        List<MeetingTaskExtractor.ExtractedActionItem> intelligentResults =
+                intelligentAnalyzer.analyze(transcript, null);
+
+        // Merge results: add items from intelligent analysis not found by first pass
+        for (MeetingTaskExtractor.ExtractedActionItem intelligentItem : intelligentResults) {
+            boolean isDuplicate = false;
+            for (int i = 0; i < results.size(); i++) {
+                MeetingTaskExtractor.ExtractedActionItem existing = results.get(i);
+                if (isSimilarTitle(intelligentItem.title, existing.title)) {
+                    // Keep the one with higher confidence
+                    if (intelligentItem.confidence > existing.confidence) {
+                        results.set(i, intelligentItem);
+                    }
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                results.add(intelligentItem);
+            }
+        }
 
         // Sort by confidence descending
         Collections.sort(results, new Comparator<MeetingTaskExtractor.ExtractedActionItem>() {

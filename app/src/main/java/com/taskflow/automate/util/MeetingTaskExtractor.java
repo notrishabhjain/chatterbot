@@ -26,14 +26,24 @@ public class MeetingTaskExtractor {
     private static final PatternEntry[] ENGLISH_PATTERNS = {
         new PatternEntry(Pattern.compile("(?i)\\b(I will|I'll|I am going to|I'm going to)\\b(.+)"), 0.9f),
         new PatternEntry(Pattern.compile("(?i)\\b(action item|TODO|task)\\b[:\\s]*(.+)?"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)\\b(assigned to|assign to)\\b(.+)"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)\\b(responsible for|in charge of)\\b(.+)"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)\\b(take ownership of|own this|pick this up)\\b(.+)?"), 0.9f),
         new PatternEntry(Pattern.compile("(?i)\\b(need to|have to|must)\\b(.+)"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)\\b(please|pls)\\b(.+)"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)\\b(follow up|follow-up)\\b(.+)?"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)\\b(make sure|ensure|take care of)\\b(.+)"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)\\b(let me|let's)\\b(.+)"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)\\b(deadline|due)\\b[:\\s]*(.+)?"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)\\b(circle back on|loop back to|get back to)\\b(.+)"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)\\b(work on|handle|take care of)\\b(.+)"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)\\b(wrap up|close out|finalize|finish)\\b(.+)"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)\\b(coordinate with|sync up on|align on)\\b(.+)"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)\\b(deliver by|ship by|target date|expected by)\\b(.+)"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)\\b(can we|could we|shall we)\\b(.+)"), 0.5f),
         new PatternEntry(Pattern.compile("(?i)\\b(should)\\b(.+)"), 0.5f),
-        new PatternEntry(Pattern.compile("(?i)\\b(will|shall)\\b(.+)"), 0.5f)
+        new PatternEntry(Pattern.compile("(?i)\\b(will|shall)\\b(.+)"), 0.5f),
+        new PatternEntry(Pattern.compile("(?i)\\b(might want to|consider|think about)\\b(.+)"), 0.3f)
     };
 
     // Hindi action patterns (Unicode)
@@ -46,7 +56,16 @@ public class MeetingTaskExtractor {
         new PatternEntry(Pattern.compile("मुझे(.+)"), 0.9f),
         new PatternEntry(Pattern.compile("(.+)ज़रूरी है"), 0.7f),
         new PatternEntry(Pattern.compile("(.+)ज़रूरी"), 0.5f),
-        new PatternEntry(Pattern.compile("deadline है(.+)?"), 0.7f)
+        new PatternEntry(Pattern.compile("deadline है(.+)?"), 0.7f),
+        new PatternEntry(Pattern.compile("(.+)कर लेना"), 0.7f),
+        new PatternEntry(Pattern.compile("(.+)कर दो"), 0.7f),
+        new PatternEntry(Pattern.compile("(.+)भेज दो"), 0.7f),
+        new PatternEntry(Pattern.compile("(.+)करवाना है"), 0.9f),
+        new PatternEntry(Pattern.compile("(.+)हो जाना चाहिए"), 0.7f),
+        new PatternEntry(Pattern.compile("(.+)कर लेना चाहिए"), 0.7f),
+        new PatternEntry(Pattern.compile("ज़िम्मेदारी है(.+)?"), 0.9f),
+        new PatternEntry(Pattern.compile("(.+)तैयार करो"), 0.7f),
+        new PatternEntry(Pattern.compile("(.+)पूरा करो"), 0.7f)
     };
 
     // Hinglish action patterns (mixed English/Hindi romanized)
@@ -60,7 +79,24 @@ public class MeetingTaskExtractor {
         new PatternEntry(Pattern.compile("(?i)(.+)karna padega"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)(.+)kar dena"), 0.7f),
         new PatternEntry(Pattern.compile("(?i)(.+)bhej do"), 0.7f),
-        new PatternEntry(Pattern.compile("(?i)(.+)dekh lena"), 0.7f)
+        new PatternEntry(Pattern.compile("(?i)(.+)dekh lena"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)assign karo"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)(.+)handle kar lo"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)isko priority pe rakho(.+)?"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)ye urgent hai(.+)?"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)ho jaana chahiye"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)deliver karna hai"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)(.+)ready karo"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)update do"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)status batao"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)confirm karo"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)discuss karo"), 0.5f),
+        new PatternEntry(Pattern.compile("(?i)(.+)plan banao"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)(.+)follow up karo"), 0.7f),
+        new PatternEntry(Pattern.compile("(?i)main (.+) karunga"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)main (.+) karungi"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)hume (.+) karna hai"), 0.9f),
+        new PatternEntry(Pattern.compile("(?i)tumhe (.+) karna hai"), 0.9f)
     };
 
     // Date patterns - English
