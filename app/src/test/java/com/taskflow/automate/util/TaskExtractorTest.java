@@ -335,4 +335,99 @@ public class TaskExtractorTest {
         assertTrue(result.dueDateHint >= now);
         assertTrue(result.dueDateHint - now < 24 * 60 * 60 * 1000L);
     }
+
+    // --- New keyword tests for expanded ACTION_KEYWORDS ---
+
+    @Test
+    public void newEnglishKeyword_delegate_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Manager", "delegate this", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newEnglishKeyword_brainstorm_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Team", "brainstorm", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newEnglishKeyword_troubleshoot_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Dev", "troubleshoot", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newEnglishKeyword_expedite_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("PM", "expedite", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newEnglishKeyword_authorize_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Admin", "authorize", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHindiKeyword_samjho_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Teacher", "samjho", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHindiKeyword_shuruKaro_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Lead", "shuru karo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHindiKeyword_khatamKaro_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("PM", "khatam karo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHinglishPhrase_meetingScheduleKaro_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Boss", "meeting schedule karo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHinglishPhrase_codeReviewKaro_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Dev", "code review karo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHinglishPhrase_deployKaro_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("DevOps", "deploy karo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHindiUnicode_suno_returnsActionable() {
+        // सुनो
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Friend", "\u0938\u0941\u0928\u094B", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void newHindiUnicode_shuru_karo_returnsActionable() {
+        // शुरू करो
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Lead", "\u0936\u0941\u0930\u0942 \u0915\u0930\u094B", "com.some.app");
+        assertTrue(result.isActionable);
+    }
 }
