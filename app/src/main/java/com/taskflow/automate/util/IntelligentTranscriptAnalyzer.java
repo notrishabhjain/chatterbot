@@ -1,7 +1,6 @@
 package com.taskflow.automate.util;
 
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -63,18 +62,6 @@ public class IntelligentTranscriptAnalyzer {
         "\u0905\u092D\u0940",              // अभी
         "\u091C\u093C\u0930\u0942\u0930\u0940" // ज़रूरी
     };
-
-    // Date reference patterns for nearby deadline linking
-    private static final Pattern DATE_PATTERN_TOMORROW = Pattern.compile(
-            "(?i)\\b(tomorrow|kal|tmrw|\u0915\u0932)\\b");
-    private static final Pattern DATE_PATTERN_TODAY = Pattern.compile(
-            "(?i)\\b(today|aaj|EOD|end of day|\u0906\u091C)\\b");
-    private static final Pattern DATE_PATTERN_NEXT_WEEK = Pattern.compile(
-            "(?i)\\b(next week|agle hafte|\u0905\u0917\u0932\u0947 \u0939\u092B\u094D\u0924\u0947)\\b");
-    private static final Pattern DATE_PATTERN_DAY = Pattern.compile(
-            "(?i)\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\b");
-    private static final Pattern DATE_PATTERN_HINGLISH_DAY = Pattern.compile(
-            "(?i)\\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\\s*tak\\b");
 
     private final MeetingTaskExtractor meetingExtractor;
 
@@ -303,29 +290,35 @@ public class IntelligentTranscriptAnalyzer {
     }
 
     /**
-     * Boosts confidence of extracted items if urgency keywords are found nearby in the text.
+     * Boosts confidence of extracted items if urgency keywords are found in the item's own rawText.
      */
     public void applyContextBoost(List<MeetingTaskExtractor.ExtractedActionItem> items, String fullText) {
         if (items == null || fullText == null) {
             return;
         }
 
-        String lowerText = fullText.toLowerCase(Locale.US);
-
         for (MeetingTaskExtractor.ExtractedActionItem item : items) {
+            if (item.rawText == null) {
+                continue;
+            }
+            String lowerItemText = item.rawText.toLowerCase(Locale.US);
             float boost = 0.0f;
 
-            // Check English urgency keywords
+            // Check English urgency keywords against item's own rawText
             for (String keyword : URGENCY_KEYWORDS_ENGLISH) {
-                if (lowerText.contains(keyword)) {
+                if (lowerItemText.contains(keyword)) {
                     boost = Math.max(boost, 0.1f);
+                    break;
                 }
             }
 
-            // Check Hindi urgency keywords
-            for (String keyword : URGENCY_KEYWORDS_HINDI) {
-                if (lowerText.contains(keyword.toLowerCase(Locale.US))) {
-                    boost = Math.max(boost, 0.1f);
+            // Check Hindi urgency keywords against item's own rawText
+            if (boost == 0.0f) {
+                for (String keyword : URGENCY_KEYWORDS_HINDI) {
+                    if (lowerItemText.contains(keyword.toLowerCase(Locale.US))) {
+                        boost = Math.max(boost, 0.1f);
+                        break;
+                    }
                 }
             }
 
@@ -399,72 +392,7 @@ public class IntelligentTranscriptAnalyzer {
         if (sentence == null || sentence.isEmpty()) {
             return null;
         }
-
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        if (DATE_PATTERN_TODAY.matcher(sentence).find()) {
-            return cal.getTimeInMillis();
-        }
-
-        if (DATE_PATTERN_TOMORROW.matcher(sentence).find()) {
-            cal.add(Calendar.DAY_OF_YEAR, 1);
-            return cal.getTimeInMillis();
-        }
-
-        if (DATE_PATTERN_NEXT_WEEK.matcher(sentence).find()) {
-            cal.add(Calendar.WEEK_OF_YEAR, 1);
-            return cal.getTimeInMillis();
-        }
-
-        Matcher dayMatcher = DATE_PATTERN_DAY.matcher(sentence);
-        if (dayMatcher.find()) {
-            String dayName = dayMatcher.group(1).toLowerCase(Locale.US);
-            return getNextDayOfWeek(dayName);
-        }
-
-        Matcher hinglishDayMatcher = DATE_PATTERN_HINGLISH_DAY.matcher(sentence);
-        if (hinglishDayMatcher.find()) {
-            String dayName = hinglishDayMatcher.group(1).toLowerCase(Locale.US);
-            return getNextDayOfWeek(dayName);
-        }
-
-        return null;
-    }
-
-    private Long getNextDayOfWeek(String dayName) {
-        int targetDay = dayNameToCalendarDay(dayName);
-        if (targetDay == -1) return null;
-
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
-
-        int currentDay = cal.get(Calendar.DAY_OF_WEEK);
-        int daysUntilTarget = targetDay - currentDay;
-        if (daysUntilTarget <= 0) {
-            daysUntilTarget += 7;
-        }
-        cal.add(Calendar.DAY_OF_YEAR, daysUntilTarget);
-        return cal.getTimeInMillis();
-    }
-
-    private int dayNameToCalendarDay(String dayName) {
-        switch (dayName) {
-            case "monday": return Calendar.MONDAY;
-            case "tuesday": return Calendar.TUESDAY;
-            case "wednesday": return Calendar.WEDNESDAY;
-            case "thursday": return Calendar.THURSDAY;
-            case "friday": return Calendar.FRIDAY;
-            case "saturday": return Calendar.SATURDAY;
-            case "sunday": return Calendar.SUNDAY;
-            default: return -1;
-        }
+        return meetingExtractor.extractDate(sentence);
     }
 
     private String detectAssigneeFromMembers(String text) {

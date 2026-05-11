@@ -9,6 +9,7 @@ public class TranscriptParser {
 
     private final MeetingTaskExtractor extractor;
     private final IntelligentTranscriptAnalyzer intelligentAnalyzer;
+    private List<String> teamMembers;
 
     public TranscriptParser() {
         extractor = new MeetingTaskExtractor();
@@ -16,6 +17,7 @@ public class TranscriptParser {
     }
 
     public void setTeamMembers(List<String> memberNames) {
+        this.teamMembers = memberNames;
         extractor.setTeamMembers(memberNames);
         intelligentAnalyzer.setTeamMembers(memberNames);
     }
@@ -68,7 +70,7 @@ public class TranscriptParser {
 
         // Second pass: Use IntelligentTranscriptAnalyzer for additional detection
         List<MeetingTaskExtractor.ExtractedActionItem> intelligentResults =
-                intelligentAnalyzer.analyze(transcript, null);
+                intelligentAnalyzer.analyze(transcript, this.teamMembers);
 
         // Merge results: add items from intelligent analysis not found by first pass
         for (MeetingTaskExtractor.ExtractedActionItem intelligentItem : intelligentResults) {

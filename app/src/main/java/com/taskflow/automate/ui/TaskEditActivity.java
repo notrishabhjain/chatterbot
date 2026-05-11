@@ -97,8 +97,6 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        long taskId = getIntent().getLongExtra(EXTRA_TASK_ID, -1);
-        outState.putLong("saved_task_id", taskId);
         if (selectedDueDate != null) {
             outState.putLong("saved_due_date", selectedDueDate);
         }

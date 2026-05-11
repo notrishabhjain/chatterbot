@@ -22,9 +22,7 @@
         android:textSize="14sp"
         android:maxLines="1"
         android:ellipsize="end"
-        android:textColor="@color/textPrimary"
-        android:clickable="true"
-        android:background="?android:attr/selectableItemBackground" />
+        android:textColor="@color/textPrimary" />
 
     <ImageView
         android:id="@+id/widget_btn_complete"
