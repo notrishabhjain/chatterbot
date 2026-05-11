@@ -163,4 +163,16 @@
     <string name="settings_integrations_header">Integrations</string>
     <string name="settings_email_digest_label">Email Digest</string>
     <string name="settings_email_digest_subtitle">Configure scheduled email reports</string>
+
+    <!-- Snooze -->
+    <string name="snooze_title">Snooze Task</string>
+    <string name="snooze_1_hour">1 Hour</string>
+    <string name="snooze_3_hours">3 Hours</string>
+    <string name="snooze_tomorrow_morning">Tomorrow Morning (8 AM)</string>
+    <string name="snooze_custom_time">Custom Time&#8230;</string>
+    <string name="snoozed_until">Snoozed until %s</string>
+
+    <!-- Starred Tasks -->
+    <string name="star_task">Star Task</string>
+    <string name="unstar_task">Unstar Task</string>
 </resources>

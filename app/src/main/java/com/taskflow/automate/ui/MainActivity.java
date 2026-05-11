@@ -26,6 +26,7 @@ import com.taskflow.automate.ui.fragment.MoreFragment;
 import com.taskflow.automate.ui.fragment.TasksFragment;
 import com.taskflow.automate.ui.fragment.TeamFragment;
 import com.taskflow.automate.ui.fragment.TodayFragment;
+import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.PreferenceManager;
 
 public class MainActivity extends AppCompatActivity {
@@ -53,6 +54,12 @@ public class MainActivity extends AppCompatActivity {
             loadFragment(new TodayFragment());
             bottomNavigation.setSelectedItemId(R.id.nav_today);
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        BadgeUtils.updateBadgeCount(this);
     }
 
     private void setupToolbar() {

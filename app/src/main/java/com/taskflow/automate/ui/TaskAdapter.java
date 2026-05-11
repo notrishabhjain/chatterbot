@@ -41,9 +41,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskClick(Task task);
     }
 
+    public interface OnTaskStarListener {
+        void onTaskStarToggle(Task task, int position);
+    }
+
     private List<Task> tasks;
     private final OnTaskCompleteListener completeListener;
     private OnTaskClickListener clickListener;
+    private OnTaskStarListener starListener;
     private final SimpleDateFormat dateFormat;
     private Map<Long, List<Tag>> tagMap = new HashMap<>();
 
@@ -55,6 +60,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     public void setOnTaskClickListener(OnTaskClickListener listener) {
         this.clickListener = listener;
+    }
+
+    public void setOnTaskStarListener(OnTaskStarListener listener) {
+        this.starListener = listener;
     }
 
     public void setTagMap(Map<Long, List<Tag>> tagMap) {
@@ -117,7 +126,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         private final TextView textDueDate;
         private final MaterialButton btnMarkComplete;
         private final ImageButton btnAddCalendar;
+        private final ImageButton btnStar;
         private final ChipGroup chipGroupTaskTags;
+        private final TextView textSubtaskProgress;
 
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -128,7 +139,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             textDueDate = itemView.findViewById(R.id.text_due_date);
             btnMarkComplete = itemView.findViewById(R.id.btn_mark_complete);
             btnAddCalendar = itemView.findViewById(R.id.btn_add_calendar);
+            btnStar = itemView.findViewById(R.id.btn_star);
             chipGroupTaskTags = itemView.findViewById(R.id.chip_group_task_tags);
+            textSubtaskProgress = itemView.findViewById(R.id.text_subtask_progress);
         }
 
         void bind(Task task, int position) {
@@ -194,6 +207,15 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             btnMarkComplete.setOnClickListener(v -> {
                 if (completeListener != null) {
                     completeListener.onTaskComplete(task, position);
+                }
+            });
+
+            // Star button
+            btnStar.setImageResource(task.isStarred() ?
+                    android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off);
+            btnStar.setOnClickListener(v -> {
+                if (starListener != null) {
+                    starListener.onTaskStarToggle(task, position);
                 }
             });
 

@@ -35,6 +35,7 @@ import com.taskflow.automate.model.Task;
 import com.taskflow.automate.ui.SwipeCallback;
 import com.taskflow.automate.ui.TaskAdapter;
 import com.taskflow.automate.ui.TaskEditActivity;
+import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
 
@@ -48,7 +49,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class TasksFragment extends Fragment implements TaskAdapter.OnTaskCompleteListener,
-        TaskAdapter.OnTaskClickListener, SwipeCallback.SwipeActionListener {
+        TaskAdapter.OnTaskClickListener, SwipeCallback.SwipeActionListener,
+        TaskAdapter.OnTaskStarListener {
 
     private RecyclerView recyclerTasks;
     private TextView textEmptyTasks;
@@ -82,6 +84,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         taskList = new ArrayList<>();
         taskAdapter = new TaskAdapter(taskList, this);
         taskAdapter.setOnTaskClickListener(this);
+        taskAdapter.setOnTaskStarListener(this);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerTasks.setAdapter(taskAdapter);
 
@@ -192,7 +195,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         .taskDao().getTasksByPriority(selectedPriorityFilter);
             } else {
                 tasks = AppDatabase.getInstance(requireContext())
-                        .taskDao().getAllTasksByPriority();
+                        .taskDao().getAllTasksByPriorityWithStarred();
             }
 
             final List<Task> result = tasks;
@@ -262,6 +265,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         AppDatabase.getInstance(requireContext())
                                 .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
                         ReminderScheduler.cancelReminder(requireContext(), task.getId());
+                        BadgeUtils.updateBadgeCount(requireContext());
 
                         // Handle recurring tasks
                         RecurringTaskManager recurringManager = new RecurringTaskManager();
@@ -278,16 +282,79 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
     }
 
     private void snoozeTask(Task task, int position) {
-        long snoozeTime = System.currentTimeMillis() + (60 * 60 * 1000L); // 1 hour
-        task.setDueDate(snoozeTime);
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_snooze, null);
+        AlertDialog dialog = new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.snooze_title)
+                .setView(dialogView)
+                .setNegativeButton(android.R.string.cancel, (d, w) -> {
+                    taskAdapter.notifyItemChanged(position);
+                })
+                .setOnCancelListener(d -> taskAdapter.notifyItemChanged(position))
+                .create();
 
+        dialogView.findViewById(R.id.btn_snooze_1hr).setOnClickListener(v -> {
+            applySnooze(task, position, System.currentTimeMillis() + (60 * 60 * 1000L));
+            dialog.dismiss();
+        });
+        dialogView.findViewById(R.id.btn_snooze_3hr).setOnClickListener(v -> {
+            applySnooze(task, position, System.currentTimeMillis() + (3 * 60 * 60 * 1000L));
+            dialog.dismiss();
+        });
+        dialogView.findViewById(R.id.btn_snooze_tomorrow).setOnClickListener(v -> {
+            Calendar cal = Calendar.getInstance();
+            cal.add(Calendar.DAY_OF_MONTH, 1);
+            cal.set(Calendar.HOUR_OF_DAY, 8);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            cal.set(Calendar.MILLISECOND, 0);
+            applySnooze(task, position, cal.getTimeInMillis());
+            dialog.dismiss();
+        });
+        dialogView.findViewById(R.id.btn_snooze_custom).setOnClickListener(v -> {
+            dialog.dismiss();
+            showCustomSnoozePicker(task, position);
+        });
+
+        dialog.show();
+    }
+
+    private void showCustomSnoozePicker(Task task, int position) {
+        Calendar calendar = Calendar.getInstance();
+        new DatePickerDialog(requireContext(), (view, year, month, dayOfMonth) -> {
+            Calendar selected = Calendar.getInstance();
+            selected.set(year, month, dayOfMonth);
+            new TimePickerDialog(requireContext(), (timeView, hourOfDay, minute) -> {
+                selected.set(Calendar.HOUR_OF_DAY, hourOfDay);
+                selected.set(Calendar.MINUTE, minute);
+                selected.set(Calendar.SECOND, 0);
+                selected.set(Calendar.MILLISECOND, 0);
+                applySnooze(task, position, selected.getTimeInMillis());
+            }, calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), false).show();
+        }, calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)).show();
+    }
+
+    private void applySnooze(Task task, int position, long snoozeTime) {
+        task.setDueDate(snoozeTime);
         executor.execute(() -> {
             AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     taskAdapter.notifyItemChanged(position);
-                    Toast.makeText(requireContext(), R.string.snoozed_message, Toast.LENGTH_SHORT).show();
+                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
+                    String msg = getString(R.string.snoozed_until, sdf.format(new Date(snoozeTime)));
+                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
                 });
+            }
+        });
+    }
+
+    @Override
+    public void onTaskStarToggle(Task task, int position) {
+        task.setStarred(!task.isStarred());
+        executor.execute(() -> {
+            AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> loadTasks());
             }
         });
     }

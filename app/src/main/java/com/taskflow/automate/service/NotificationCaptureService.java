@@ -9,6 +9,7 @@ import android.util.Log;
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
 import com.taskflow.automate.model.Task;
+import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
@@ -140,6 +141,9 @@ public class NotificationCaptureService extends NotificationListenerService {
 
                 // Schedule reminder
                 ReminderScheduler.scheduleReminder(getApplicationContext(), task);
+
+                // Update badge count
+                BadgeUtils.updateBadgeCount(getApplicationContext());
 
                 Log.d(TAG, "Task created: " + task.getTitle() + " (priority: " + task.getPriorityLabel() + ")");
             } catch (Exception e) {
