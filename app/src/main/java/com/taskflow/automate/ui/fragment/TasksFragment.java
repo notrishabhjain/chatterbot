@@ -275,7 +275,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         selectRow.setLayoutParams(selectRowParams);
 
         MaterialButton btnSelectAll = new MaterialButton(requireContext(), null,
-                com.google.android.material.R.attr.materialButtonTextStyle);
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
         btnSelectAll.setText("Select All");
         btnSelectAll.setTextSize(12);
         btnSelectAll.setOnClickListener(v -> {
@@ -285,7 +285,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         selectRow.addView(btnSelectAll);
 
         MaterialButton btnDeselectAll = new MaterialButton(requireContext(), null,
-                com.google.android.material.R.attr.materialButtonTextStyle);
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
         btnDeselectAll.setText("Deselect All");
         btnDeselectAll.setTextSize(12);
         btnDeselectAll.setOnClickListener(v -> {
