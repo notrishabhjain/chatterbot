@@ -33,8 +33,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -176,10 +178,21 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
             combinedTasks.addAll(overdueTasks);
             combinedTasks.addAll(todayTasks);
 
+            // Pre-load subtask counts
+            Map<Long, int[]> countMap = new HashMap<>();
+            for (Task t : combinedTasks) {
+                int total = AppDatabase.getInstance(requireContext()).subtaskDao().getTotalSubtaskCount(t.getId());
+                if (total > 0) {
+                    int completed = AppDatabase.getInstance(requireContext()).subtaskDao().getCompletedSubtaskCount(t.getId());
+                    countMap.put(t.getId(), new int[]{completed, total});
+                }
+            }
+
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     taskList.clear();
                     taskList.addAll(combinedTasks);
+                    taskAdapter.setSubtaskCountMap(countMap);
                     taskAdapter.updateTasks(taskList);
                     updateEmptyState();
                 });

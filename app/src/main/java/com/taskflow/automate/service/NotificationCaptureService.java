@@ -106,6 +106,14 @@ public class NotificationCaptureService extends NotificationListenerService {
             return;
         }
 
+        // Clean up old entries before dedup check
+        cleanupDeduplicationMap();
+
+        // Bound the map size to prevent unbounded growth
+        if (deduplicationMap.size() > 100) {
+            deduplicationMap.clear();
+        }
+
         // Smart deduplication - check if same sender sent within 5 minutes
         String deduplicationKey = packageName + "|" + (title != null ? title : "");
         DeduplicationEntry existingEntry = deduplicationMap.get(deduplicationKey);
@@ -117,9 +125,6 @@ public class NotificationCaptureService extends NotificationListenerService {
             existingEntry.timestamp = now; // Update timestamp
             return;
         }
-
-        // Clean up old entries
-        cleanupDeduplicationMap();
 
         // Create and persist the task
         String notificationKey = sbn.getKey();

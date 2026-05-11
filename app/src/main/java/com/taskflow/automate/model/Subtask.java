@@ -2,9 +2,16 @@ package com.taskflow.automate.model;
 
 import androidx.room.ColumnInfo;
 import androidx.room.Entity;
+import androidx.room.ForeignKey;
 import androidx.room.PrimaryKey;
 
-@Entity(tableName = "subtasks")
+@Entity(tableName = "subtasks",
+        foreignKeys = @ForeignKey(
+            entity = Task.class,
+            parentColumns = "id",
+            childColumns = "task_id",
+            onDelete = ForeignKey.CASCADE
+        ))
 public class Subtask {
 
     @PrimaryKey(autoGenerate = true)

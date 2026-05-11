@@ -43,8 +43,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -198,11 +200,22 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         .taskDao().getAllTasksByPriorityWithStarred();
             }
 
+            // Pre-load subtask counts
+            Map<Long, int[]> countMap = new HashMap<>();
+            for (Task t : tasks) {
+                int total = AppDatabase.getInstance(requireContext()).subtaskDao().getTotalSubtaskCount(t.getId());
+                if (total > 0) {
+                    int completed = AppDatabase.getInstance(requireContext()).subtaskDao().getCompletedSubtaskCount(t.getId());
+                    countMap.put(t.getId(), new int[]{completed, total});
+                }
+            }
+
             final List<Task> result = tasks;
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     taskList.clear();
                     taskList.addAll(result);
+                    taskAdapter.setSubtaskCountMap(countMap);
                     taskAdapter.updateTasks(taskList);
                     updateEmptyState();
                 });

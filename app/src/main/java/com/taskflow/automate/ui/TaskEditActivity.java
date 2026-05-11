@@ -400,7 +400,6 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     public void onSubtaskDelete(Subtask subtask, int position) {
         executor.execute(() -> AppDatabase.getInstance(this).subtaskDao().deleteSubtask(subtask));
         subtaskAdapter.removeItem(position);
-        subtaskList.remove(subtask);
     }
 
     private void saveTask() {
