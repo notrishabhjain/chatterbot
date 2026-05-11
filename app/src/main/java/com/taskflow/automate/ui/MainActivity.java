@@ -28,6 +28,7 @@ import com.taskflow.automate.ui.fragment.TeamFragment;
 import com.taskflow.automate.ui.fragment.TodayFragment;
 import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.PreferenceManager;
+import com.taskflow.automate.worker.PriorityEscalationWorker;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -49,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
         setupBottomNavigation();
         checkNotificationListenerPermission();
         requestPostNotificationPermission();
+        PriorityEscalationWorker.scheduleEscalation(this);
 
         if (savedInstanceState == null) {
             loadFragment(new TodayFragment());

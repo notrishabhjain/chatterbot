@@ -7,11 +7,14 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
@@ -20,11 +23,14 @@ import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.textfield.TextInputEditText;
 import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
+import com.taskflow.automate.model.Subtask;
 import com.taskflow.automate.model.Tag;
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.model.TaskTagCrossRef;
+import com.taskflow.automate.ui.adapter.SubtaskAdapter;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -32,7 +38,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-public class TaskEditActivity extends AppCompatActivity {
+public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapter.SubtaskActionListener {
 
     public static final String EXTRA_TASK_ID = "extra_task_id";
 
@@ -44,6 +50,10 @@ public class TaskEditActivity extends AppCompatActivity {
     private MaterialButton btnSave;
     private ChipGroup chipGroupTags;
     private Chip chipAddTag;
+    private RecyclerView recyclerSubtasks;
+    private SubtaskAdapter subtaskAdapter;
+    private List<Subtask> subtaskList = new ArrayList<>();
+    private MaterialButton btnAddSubtask;
 
     private Task currentTask;
     private Long selectedDueDate;
@@ -97,6 +107,14 @@ public class TaskEditActivity extends AppCompatActivity {
         btnSave = findViewById(R.id.btn_save);
         chipGroupTags = findViewById(R.id.chip_group_tags);
         chipAddTag = findViewById(R.id.chip_add_tag);
+        recyclerSubtasks = findViewById(R.id.recycler_subtasks);
+        btnAddSubtask = findViewById(R.id.btn_add_subtask);
+
+        recyclerSubtasks.setLayoutManager(new LinearLayoutManager(this));
+        subtaskAdapter = new SubtaskAdapter(subtaskList, this);
+        recyclerSubtasks.setAdapter(subtaskAdapter);
+
+        btnAddSubtask.setOnClickListener(v -> showAddSubtaskDialog());
     }
 
     private void setupPrioritySpinner() {
@@ -160,6 +178,7 @@ public class TaskEditActivity extends AppCompatActivity {
             if (currentTask != null) {
                 runOnUiThread(() -> populateFields());
                 loadTagsForTask(taskId);
+                loadSubtasks(taskId);
             } else {
                 runOnUiThread(this::finish);
             }
@@ -323,6 +342,65 @@ public class TaskEditActivity extends AppCompatActivity {
         } else {
             spinnerRecurrence.setSelection(0);
         }
+    }
+
+    private void loadSubtasks(long taskId) {
+        executor.execute(() -> {
+            List<Subtask> subtasks = AppDatabase.getInstance(this).subtaskDao().getSubtasksForTask(taskId);
+            runOnUiThread(() -> {
+                subtaskList.clear();
+                subtaskList.addAll(subtasks);
+                subtaskAdapter.updateSubtasks(subtaskList);
+            });
+        });
+    }
+
+    private void showAddSubtaskDialog() {
+        EditText editText = new EditText(this);
+        editText.setHint(R.string.enter_subtask_title);
+        editText.setSingleLine(true);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.add_subtask)
+                .setView(editText)
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    String title = editText.getText().toString().trim();
+                    if (!title.isEmpty() && currentTask != null) {
+                        Subtask subtask = new Subtask();
+                        subtask.setTaskId(currentTask.getId());
+                        subtask.setTitle(title);
+                        subtask.setCompleted(false);
+                        subtask.setCreatedAt(System.currentTimeMillis());
+                        executor.execute(() -> {
+                            long id = AppDatabase.getInstance(this).subtaskDao().insertSubtask(subtask);
+                            subtask.setId(id);
+                            runOnUiThread(() -> {
+                                subtaskList.add(subtask);
+                                subtaskAdapter.notifyItemInserted(subtaskList.size() - 1);
+                            });
+                        });
+                    }
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    @Override
+    public void onSubtaskToggle(Subtask subtask, boolean isChecked) {
+        subtask.setCompleted(isChecked);
+        executor.execute(() -> AppDatabase.getInstance(this).subtaskDao().updateSubtask(subtask));
+        // Refresh to update strikethrough
+        int index = subtaskList.indexOf(subtask);
+        if (index >= 0) {
+            subtaskAdapter.notifyItemChanged(index);
+        }
+    }
+
+    @Override
+    public void onSubtaskDelete(Subtask subtask, int position) {
+        executor.execute(() -> AppDatabase.getInstance(this).subtaskDao().deleteSubtask(subtask));
+        subtaskAdapter.removeItem(position);
+        subtaskList.remove(subtask);
     }
 
     private void saveTask() {

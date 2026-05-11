@@ -20,6 +20,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.taskflow.automate.R;
+import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.model.Tag;
 import com.taskflow.automate.model.Task;
 
@@ -218,6 +219,22 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                     starListener.onTaskStarToggle(task, position);
                 }
             });
+
+            // Subtask progress
+            Context ctx = itemView.getContext();
+            new Thread(() -> {
+                int total = AppDatabase.getInstance(ctx).subtaskDao().getTotalSubtaskCount(task.getId());
+                int completed = AppDatabase.getInstance(ctx).subtaskDao().getCompletedSubtaskCount(task.getId());
+                if (total > 0) {
+                    String progress = completed + "/" + total + " done";
+                    textSubtaskProgress.post(() -> {
+                        textSubtaskProgress.setText(progress);
+                        textSubtaskProgress.setVisibility(View.VISIBLE);
+                    });
+                } else {
+                    textSubtaskProgress.post(() -> textSubtaskProgress.setVisibility(View.GONE));
+                }
+            }).start();
 
             btnAddCalendar.setOnClickListener(v -> {
                 Context context = itemView.getContext();

@@ -175,4 +175,10 @@
     <!-- Starred Tasks -->
     <string name="star_task">Star Task</string>
     <string name="unstar_task">Unstar Task</string>
+
+    <!-- Subtasks -->
+    <string name="subtasks_header">Subtasks</string>
+    <string name="add_subtask">+ Add Subtask</string>
+    <string name="subtask_progress">%d/%d done</string>
+    <string name="enter_subtask_title">Enter subtask title</string>
 </resources>

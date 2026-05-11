@@ -134,6 +134,30 @@
                 app:chipIcon="@android:drawable/ic_input_add"
                 style="@style/Widget.Material3.Chip.Assist" />
 
+            <!-- Subtasks Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/subtasks_header"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:textColor="@color/textPrimary" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_subtasks"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:nestedScrollingEnabled="false" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_add_subtask"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/add_subtask"
+                style="@style/Widget.Material3.Button.TextButton" />
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_save"
                 android:layout_width="match_parent"
