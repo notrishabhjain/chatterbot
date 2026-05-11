@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
@@ -46,6 +48,10 @@ public class ImportFragment extends Fragment {
     private MaterialButton btnParse;
     private RecyclerView recyclerParsedItems;
     private MaterialButton btnCreateTasks;
+    private LinearLayout layoutTranslatedSection;
+    private MaterialButton btnToggleTranslation;
+    private TextView textTranslationNote;
+    private TextView textTranslatedTranscript;
     private ActionItemAdapter actionItemAdapter;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final PriorityAssigner priorityAssigner = new PriorityAssigner();
@@ -89,6 +95,10 @@ public class ImportFragment extends Fragment {
         btnParse = view.findViewById(R.id.btn_parse);
         recyclerParsedItems = view.findViewById(R.id.recycler_parsed_items);
         btnCreateTasks = view.findViewById(R.id.btn_create_tasks);
+        layoutTranslatedSection = view.findViewById(R.id.layout_translated_section);
+        btnToggleTranslation = view.findViewById(R.id.btn_toggle_translation);
+        textTranslationNote = view.findViewById(R.id.text_translation_note);
+        textTranslatedTranscript = view.findViewById(R.id.text_translated_transcript);
 
         recyclerParsedItems.setLayoutManager(new LinearLayoutManager(requireContext()));
 
@@ -96,6 +106,13 @@ public class ImportFragment extends Fragment {
         btnPickFile.setOnClickListener(v -> pickFile());
         btnParse.setOnClickListener(v -> parseTranscript());
         btnCreateTasks.setOnClickListener(v -> createTasks());
+
+        // Toggle translation section visibility
+        btnToggleTranslation.setOnClickListener(v -> {
+            boolean isVisible = textTranslatedTranscript.getVisibility() == View.VISIBLE;
+            textTranslationNote.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+            textTranslatedTranscript.setVisibility(isVisible ? View.GONE : View.VISIBLE);
+        });
     }
 
     @Override
@@ -174,6 +191,10 @@ public class ImportFragment extends Fragment {
             parser.setTeamMembers(memberNames);
             List<MeetingTaskExtractor.ExtractedActionItem> items = parser.parseTranscript(text);
 
+            // Get translation info
+            final boolean containedNonEnglish = parser.lastTranscriptContainedNonEnglish();
+            final String translatedText = parser.getLastTranslatedText();
+
             if (getActivity() != null) {
                 getActivity().runOnUiThread(() -> {
                     if (items.isEmpty()) {
@@ -185,6 +206,17 @@ public class ImportFragment extends Fragment {
                         recyclerParsedItems.setAdapter(actionItemAdapter);
                         recyclerParsedItems.setVisibility(View.VISIBLE);
                         btnCreateTasks.setVisibility(View.VISIBLE);
+                    }
+
+                    // Show translated transcript section if non-English content was detected
+                    if (containedNonEnglish && translatedText != null) {
+                        layoutTranslatedSection.setVisibility(View.VISIBLE);
+                        textTranslatedTranscript.setText(translatedText);
+                        // Start collapsed
+                        textTranslationNote.setVisibility(View.GONE);
+                        textTranslatedTranscript.setVisibility(View.GONE);
+                    } else {
+                        layoutTranslatedSection.setVisibility(View.GONE);
                     }
                 });
             }
