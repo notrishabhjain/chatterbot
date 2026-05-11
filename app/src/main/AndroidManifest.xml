@@ -91,6 +91,15 @@
                 android:resource="@xml/widget_info" />
         </receiver>
 
+        <!-- Quick Add Receiver -->
+        <receiver
+            android:name=".receiver.QuickAddReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.taskflow.automate.ACTION_QUICK_ADD" />
+            </intent-filter>
+        </receiver>
+
         <!-- Widget Service -->
         <service
             android:name=".widget.TaskWidgetService"

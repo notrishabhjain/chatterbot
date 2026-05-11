@@ -41,11 +41,17 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskClick(Task task);
     }
 
+    public interface OnTaskStarListener {
+        void onTaskStarToggle(Task task, int position);
+    }
+
     private List<Task> tasks;
     private final OnTaskCompleteListener completeListener;
     private OnTaskClickListener clickListener;
+    private OnTaskStarListener starListener;
     private final SimpleDateFormat dateFormat;
     private Map<Long, List<Tag>> tagMap = new HashMap<>();
+    private Map<Long, int[]> subtaskCountMap = new HashMap<>();
 
     public TaskAdapter(List<Task> tasks, OnTaskCompleteListener listener) {
         this.tasks = tasks;
@@ -57,8 +63,16 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         this.clickListener = listener;
     }
 
+    public void setOnTaskStarListener(OnTaskStarListener listener) {
+        this.starListener = listener;
+    }
+
     public void setTagMap(Map<Long, List<Tag>> tagMap) {
         this.tagMap = tagMap;
+    }
+
+    public void setSubtaskCountMap(Map<Long, int[]> map) {
+        this.subtaskCountMap = map;
     }
 
     @NonNull
@@ -117,7 +131,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         private final TextView textDueDate;
         private final MaterialButton btnMarkComplete;
         private final ImageButton btnAddCalendar;
+        private final ImageButton btnStar;
         private final ChipGroup chipGroupTaskTags;
+        private final TextView textSubtaskProgress;
 
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -128,7 +144,9 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             textDueDate = itemView.findViewById(R.id.text_due_date);
             btnMarkComplete = itemView.findViewById(R.id.btn_mark_complete);
             btnAddCalendar = itemView.findViewById(R.id.btn_add_calendar);
+            btnStar = itemView.findViewById(R.id.btn_star);
             chipGroupTaskTags = itemView.findViewById(R.id.chip_group_task_tags);
+            textSubtaskProgress = itemView.findViewById(R.id.text_subtask_progress);
         }
 
         void bind(Task task, int position) {
@@ -196,6 +214,24 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                     completeListener.onTaskComplete(task, position);
                 }
             });
+
+            // Star button
+            btnStar.setImageResource(task.isStarred() ?
+                    android.R.drawable.btn_star_big_on : android.R.drawable.btn_star_big_off);
+            btnStar.setOnClickListener(v -> {
+                if (starListener != null) {
+                    starListener.onTaskStarToggle(task, position);
+                }
+            });
+
+            // Subtask progress (from pre-loaded map)
+            int[] counts = subtaskCountMap.get(task.getId());
+            if (counts != null && counts[1] > 0) {
+                textSubtaskProgress.setText(counts[0] + "/" + counts[1] + " done");
+                textSubtaskProgress.setVisibility(View.VISIBLE);
+            } else {
+                textSubtaskProgress.setVisibility(View.GONE);
+            }
 
             btnAddCalendar.setOnClickListener(v -> {
                 Context context = itemView.getContext();

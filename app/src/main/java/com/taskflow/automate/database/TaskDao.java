@@ -86,4 +86,13 @@ public interface TaskDao {
 
     @Query("SELECT COUNT(*) FROM tasks WHERE status = 'completed' AND completed_at BETWEEN :weekStart AND :weekEnd")
     int getCompletedThisWeekCount(long weekStart, long weekEnd);
+
+    @Query("SELECT * FROM tasks WHERE starred = 1 AND status = 'pending' ORDER BY priority ASC, created_at DESC")
+    List<Task> getStarredPendingTasks();
+
+    @Query("SELECT * FROM tasks WHERE status = 'pending' ORDER BY starred DESC, priority ASC, created_at DESC")
+    List<Task> getAllTasksByPriorityWithStarred();
+
+    @Query("UPDATE tasks SET priority = 1 WHERE due_date < :now AND due_date IS NOT NULL AND status = 'pending' AND priority > 1")
+    void updateOverdueTasksPriority(long now);
 }

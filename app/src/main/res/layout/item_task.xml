@@ -90,6 +90,18 @@
             app:layout_constraintStart_toEndOf="@id/priority_bar"
             app:layout_constraintEnd_toEndOf="parent" />
 
+        <TextView
+            android:id="@+id/text_subtask_progress"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="4dp"
+            android:textSize="12sp"
+            android:textColor="@color/textSecondary"
+            android:visibility="gone"
+            app:layout_constraintTop_toBottomOf="@id/chip_group_task_tags"
+            app:layout_constraintStart_toEndOf="@id/priority_bar" />
+
         <ImageButton
             android:id="@+id/btn_add_calendar"
             android:layout_width="36dp"
@@ -100,8 +112,21 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="Add to calendar"
             android:src="@drawable/ic_calendar_add"
-            app:layout_constraintTop_toBottomOf="@id/chip_group_task_tags"
+            app:layout_constraintTop_toBottomOf="@id/text_subtask_progress"
             app:layout_constraintStart_toEndOf="@id/priority_bar"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <ImageButton
+            android:id="@+id/btn_star"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="12dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/star_task"
+            android:src="@android:drawable/btn_star_big_off"
+            app:layout_constraintTop_toBottomOf="@id/text_subtask_progress"
+            app:layout_constraintStart_toEndOf="@id/btn_add_calendar"
             app:layout_constraintBottom_toBottomOf="parent" />
 
         <com.google.android.material.button.MaterialButton
@@ -114,7 +139,7 @@
             android:text="@string/mark_complete"
             app:icon="@drawable/ic_check_circle"
             style="@style/Widget.MaterialComponents.Button.TextButton"
-            app:layout_constraintTop_toBottomOf="@id/chip_group_task_tags"
+            app:layout_constraintTop_toBottomOf="@id/text_subtask_progress"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent" />
 

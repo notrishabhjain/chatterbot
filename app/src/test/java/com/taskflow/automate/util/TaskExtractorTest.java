@@ -14,6 +14,8 @@ public class TaskExtractorTest {
         taskExtractor = new TaskExtractor();
     }
 
+    // --- Non-actionable package tests ---
+
     @Test
     public void nonActionablePackage_spotify_returnsNotActionable() {
         TaskExtractor.TaskExtractionResult result =
@@ -35,6 +37,8 @@ public class TaskExtractorTest {
         assertFalse(result.isActionable);
     }
 
+    // --- Non-actionable content tests ---
+
     @Test
     public void nonActionableContent_music_returnsNotActionable() {
         TaskExtractor.TaskExtractionResult result =
@@ -55,6 +59,8 @@ public class TaskExtractorTest {
                 taskExtractor.extractTask("Download complete", "file.zip", "com.some.app");
         assertFalse(result.isActionable);
     }
+
+    // --- Always-actionable package tests ---
 
     @Test
     public void calendarPackage_returnsActionable() {
@@ -79,6 +85,72 @@ public class TaskExtractorTest {
     }
 
     @Test
+    public void whatsApp_anyMessage_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("John", "Can you check this?", "com.whatsapp");
+        assertTrue(result.isActionable);
+        assertEquals("John", result.taskTitle);
+        assertEquals("Can you check this?", result.taskDescription);
+    }
+
+    @Test
+    public void whatsApp_casualChat_returnsActionable() {
+        // WhatsApp is in ALWAYS_ACTIONABLE_PACKAGES, so even casual messages are captured
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Group Chat", "Lol that was funny", "com.whatsapp");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void whatsApp_hindiMessage_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Rahul", "Yeh file bhej do kal tak", "com.whatsapp");
+        assertTrue(result.isActionable);
+        assertEquals("Rahul", result.taskTitle);
+    }
+
+    @Test
+    public void telegram_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Work Group", "Meeting shifted to 3pm", "org.telegram.messenger");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void slack_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("#general", "Deployment at 5pm today", "com.slack");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void teams_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Manager", "Sprint planning tomorrow", "com.microsoft.teams");
+        assertTrue(result.isActionable);
+    }
+
+    // --- Play Store no longer blocked ---
+
+    @Test
+    public void playStore_noLongerBlocked_returnsActionable() {
+        // com.android.vending was removed from NON_ACTIONABLE_PACKAGES
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("App Update", "Your app has been updated successfully", "com.android.vending");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void playStore_shortNotification_returnsNotActionable() {
+        // Play Store with very short content should still be rejected
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Hi", "", "com.android.vending");
+        assertFalse(result.isActionable);
+    }
+
+    // --- Action keyword tests ---
+
+    @Test
     public void messageWithActionKeyword_pleaseReview_returnsActionable() {
         TaskExtractor.TaskExtractionResult result =
                 taskExtractor.extractTask("John", "Please review the document", "com.whatsapp");
@@ -95,18 +167,99 @@ public class TaskExtractorTest {
     }
 
     @Test
-    public void messageWithoutActionKeywords_fromNonPriorityApp_returnsNotActionable() {
+    public void messageWithActionKeyword_canYou_returnsActionable() {
         TaskExtractor.TaskExtractionResult result =
-                taskExtractor.extractTask("Friend", "Hey how are you?", "com.some.random.app");
+                taskExtractor.extractTask("Boss", "can you finish the report?", "com.some.random.app");
+        assertTrue(result.isActionable);
+    }
+
+    // --- Hindi/Hinglish keyword tests ---
+
+    @Test
+    public void hindiKeyword_karo_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Team", "karo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void hindiKeyword_jaldi_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("PM", "jaldi bhejo", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void hindiKeyword_zaruri_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Lead", "zaruri hai ye", "com.some.app");
+        assertTrue(result.isActionable);
+    }
+
+    // --- Short notification rejection ---
+
+    @Test
+    public void shortNotification_singleChar_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("", "a", "com.some.app");
         assertFalse(result.isActionable);
     }
 
     @Test
-    public void messageWithoutActionKeywords_casualChat_returnsNotActionable() {
+    public void shortNotification_twoChars_returnsNotActionable() {
         TaskExtractor.TaskExtractionResult result =
-                taskExtractor.extractTask("Group Chat", "Lol that was funny", "com.whatsapp");
+                taskExtractor.extractTask("", "ab", "com.some.app");
         assertFalse(result.isActionable);
     }
+
+    @Test
+    public void shortNotification_emptyBoth_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("", "", "com.some.app");
+        assertFalse(result.isActionable);
+    }
+
+    // --- Group message summary rejection ---
+
+    @Test
+    public void groupMessageSummary_noContent_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("WhatsApp", "5 new messages", "com.whatsapp");
+        assertFalse(result.isActionable);
+    }
+
+    @Test
+    public void groupMessageSummary_singleMessage_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Group", "1 message", "com.whatsapp");
+        assertFalse(result.isActionable);
+    }
+
+    @Test
+    public void groupMessageWithContent_returnsActionable() {
+        // Has a colon indicating actual message content, not just summary
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Work Group", "John: 2 messages need your review", "com.whatsapp");
+        assertTrue(result.isActionable);
+    }
+
+    // --- Meaningful content from unknown apps ---
+
+    @Test
+    public void unknownApp_meaningfulContent_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Friend", "Hey how are you doing today?", "com.some.random.app");
+        assertTrue(result.isActionable);
+    }
+
+    @Test
+    public void unknownApp_shortContent_noKeyword_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("App", "Hi there", "com.some.random.app");
+        assertFalse(result.isActionable);
+    }
+
+    // --- Due date extraction tests ---
 
     @Test
     public void dueDateExtraction_tomorrow_parsesCorrectly() {
@@ -159,5 +312,27 @@ public class TaskExtractorTest {
                 taskExtractor.extractTask("Manager", "Please review this", "com.some.app");
         assertTrue(result.isActionable);
         assertNull(result.dueDateHint);
+    }
+
+    @Test
+    public void dueDateExtraction_hindiKalTak_parsesTomorrow() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Rahul", "File bhej do kal tak", "com.whatsapp");
+        assertTrue(result.isActionable);
+        assertNotNull(result.dueDateHint);
+        long expectedMin = System.currentTimeMillis() + 23 * 60 * 60 * 1000L;
+        long expectedMax = System.currentTimeMillis() + 25 * 60 * 60 * 1000L;
+        assertTrue(result.dueDateHint > expectedMin && result.dueDateHint < expectedMax);
+    }
+
+    @Test
+    public void dueDateExtraction_hindiAaj_parsesToday() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Team", "aaj submit karo", "com.whatsapp");
+        assertTrue(result.isActionable);
+        assertNotNull(result.dueDateHint);
+        long now = System.currentTimeMillis();
+        assertTrue(result.dueDateHint >= now);
+        assertTrue(result.dueDateHint - now < 24 * 60 * 60 * 1000L);
     }
 }

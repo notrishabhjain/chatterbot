@@ -55,6 +55,9 @@ public class Task {
     @ColumnInfo(name = "recurrence_interval", defaultValue = "0")
     private int recurrenceInterval;
 
+    @ColumnInfo(name = "starred", defaultValue = "0")
+    private boolean starred;
+
     public Task() {
     }
 
@@ -123,6 +126,10 @@ public class Task {
         return recurrenceInterval;
     }
 
+    public boolean isStarred() {
+        return starred;
+    }
+
     // Setters
     public void setId(long id) {
         this.id = id;
@@ -186,6 +193,10 @@ public class Task {
 
     public void setRecurrenceInterval(int recurrenceInterval) {
         this.recurrenceInterval = recurrenceInterval;
+    }
+
+    public void setStarred(boolean starred) {
+        this.starred = starred;
     }
 
     // Helper method
