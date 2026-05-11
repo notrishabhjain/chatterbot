@@ -190,13 +190,13 @@ public class IntelligentTranscriptAnalyzerTest {
     @Test
     public void applyContextBoost_urgentKeywordPresent_boostsConfidence() {
         MeetingTaskExtractor.ExtractedActionItem item = new MeetingTaskExtractor.ExtractedActionItem();
-        item.rawText = "finish the report";
+        item.rawText = "this is urgent, finish the report asap";
         item.title = "finish the report";
         item.confidence = 0.7f;
         item.detectedLanguage = MeetingTaskExtractor.Language.ENGLISH;
 
         List<MeetingTaskExtractor.ExtractedActionItem> items = Arrays.asList(item);
-        analyzer.applyContextBoost(items, "This is urgent, we need to finish the report asap");
+        analyzer.applyContextBoost(items, "this is urgent, finish the report asap");
 
         assertTrue(item.confidence > 0.7f);
     }
@@ -218,7 +218,7 @@ public class IntelligentTranscriptAnalyzerTest {
     @Test
     public void applyContextBoost_hindiUrgencyKeyword_boostsConfidence() {
         MeetingTaskExtractor.ExtractedActionItem item = new MeetingTaskExtractor.ExtractedActionItem();
-        item.rawText = "report bhejo";
+        item.rawText = "jaldi report bhejo ye zaroori hai";
         item.title = "report bhejo";
         item.confidence = 0.7f;
         item.detectedLanguage = MeetingTaskExtractor.Language.HINGLISH;
@@ -232,7 +232,7 @@ public class IntelligentTranscriptAnalyzerTest {
     @Test
     public void applyContextBoost_confidenceCapAt1() {
         MeetingTaskExtractor.ExtractedActionItem item = new MeetingTaskExtractor.ExtractedActionItem();
-        item.rawText = "fix this";
+        item.rawText = "urgent critical asap immediately fix this";
         item.title = "fix this";
         item.confidence = 0.95f;
         item.detectedLanguage = MeetingTaskExtractor.Language.ENGLISH;
