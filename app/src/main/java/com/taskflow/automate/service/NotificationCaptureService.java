@@ -10,28 +10,51 @@ import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.util.BadgeUtils;
+import com.taskflow.automate.util.DuplicateTaskDetector;
 import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
+import com.taskflow.automate.util.SmartTaskCategorizer;
 import com.taskflow.automate.util.TaskExtractor;
 import com.taskflow.automate.widget.TaskWidgetProvider;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class NotificationCaptureService extends NotificationListenerService {
 
     private static final String TAG = "NotificationCapture";
     private static final long DEDUP_WINDOW_MS = 5 * 60 * 1000L; // 5 minutes
 
+    private static final Set<String> MESSAGING_APPS = new HashSet<>(Arrays.asList(
+            "com.whatsapp", "com.whatsapp.w4b",
+            "org.telegram.messenger",
+            "com.slack", "com.Slack",
+            "com.microsoft.teams"
+    ));
+
+    private static final Set<String> EMAIL_APPS = new HashSet<>(Arrays.asList(
+            "com.google.android.gm",
+            "com.microsoft.office.outlook"
+    ));
+
+    private static final Pattern URL_PATTERN = Pattern.compile("https?://[\\S]+");
+
     private TaskExtractor taskExtractor;
     private PriorityAssigner priorityAssigner;
+    private SmartTaskCategorizer smartCategorizer;
+    private DuplicateTaskDetector duplicateDetector;
     private PreferenceManager preferenceManager;
     private ExecutorService executorService;
     private final ConcurrentHashMap<String, DeduplicationEntry> deduplicationMap = new ConcurrentHashMap<>();
@@ -51,6 +74,8 @@ public class NotificationCaptureService extends NotificationListenerService {
         super.onCreate();
         taskExtractor = new TaskExtractor();
         priorityAssigner = new PriorityAssigner();
+        smartCategorizer = new SmartTaskCategorizer();
+        duplicateDetector = new DuplicateTaskDetector();
         preferenceManager = new PreferenceManager(this);
         executorService = Executors.newSingleThreadExecutor();
     }
@@ -95,6 +120,26 @@ public class NotificationCaptureService extends NotificationListenerService {
         String title = extras.getString(Notification.EXTRA_TITLE);
         String text = extras.getString(Notification.EXTRA_TEXT);
 
+        // Extract richer context from notification extras
+        String enhancedDescription = buildEnhancedDescription(text, extras);
+
+        // For messaging apps: use title as sender/assignee
+        String senderName = null;
+        if (MESSAGING_APPS.contains(packageName)) {
+            senderName = title;
+        }
+
+        // For email apps: title is the sender, text has subject - swap
+        if (EMAIL_APPS.contains(packageName)) {
+            senderName = title;
+            // Use text as title (subject line) for email notifications
+            if (text != null && !text.isEmpty()) {
+                String emailSubject = text;
+                // If text contains ":", the part before might be subject
+                title = emailSubject;
+            }
+        }
+
         // Skip if both title and text are empty
         if ((title == null || title.isEmpty()) && (text == null || text.isEmpty())) {
             return;
@@ -105,6 +150,20 @@ public class NotificationCaptureService extends NotificationListenerService {
 
         if (!result.isActionable) {
             return;
+        }
+
+        // Apply enhanced description if richer than original
+        if (enhancedDescription != null && !enhancedDescription.isEmpty()) {
+            if (result.taskDescription == null || enhancedDescription.length() > result.taskDescription.length()) {
+                result.taskDescription = enhancedDescription;
+            }
+        }
+
+        // Detect and append URLs found in notification text
+        String urls = extractUrls(text);
+        if (urls != null && !urls.isEmpty()) {
+            String desc = result.taskDescription != null ? result.taskDescription : "";
+            result.taskDescription = desc + "\n" + urls;
         }
 
         // Clean up old entries before dedup check
@@ -129,7 +188,7 @@ public class NotificationCaptureService extends NotificationListenerService {
 
         // Create and persist the task
         String notificationKey = sbn.getKey();
-        createAndPersistTask(result, packageName, notificationKey, deduplicationKey);
+        createAndPersistTask(result, packageName, notificationKey, deduplicationKey, senderName);
     }
 
     @Override
@@ -142,9 +201,62 @@ public class NotificationCaptureService extends NotificationListenerService {
         return blockedApps.contains(packageName);
     }
 
+    /**
+     * Builds an enhanced description by extracting additional context from notification extras.
+     */
+    private String buildEnhancedDescription(String baseText, Bundle extras) {
+        StringBuilder desc = new StringBuilder();
+
+        if (baseText != null && !baseText.isEmpty()) {
+            desc.append(baseText);
+        }
+
+        // Extract text lines (available in bundled/expanded notifications)
+        CharSequence[] textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+        if (textLines != null && textLines.length > 0) {
+            for (CharSequence line : textLines) {
+                if (line != null && line.length() > 0) {
+                    if (desc.length() > 0) {
+                        desc.append("\n");
+                    }
+                    desc.append(line);
+                }
+            }
+        }
+
+        // Extract sub text
+        String subText = extras.getString(Notification.EXTRA_SUB_TEXT);
+        if (subText != null && !subText.isEmpty()) {
+            if (desc.length() > 0) {
+                desc.append("\n");
+            }
+            desc.append(subText);
+        }
+
+        return desc.toString();
+    }
+
+    /**
+     * Extracts URLs from the notification text using a regex pattern.
+     */
+    private String extractUrls(String text) {
+        if (text == null || text.isEmpty()) {
+            return null;
+        }
+        Matcher matcher = URL_PATTERN.matcher(text);
+        StringBuilder urls = new StringBuilder();
+        while (matcher.find()) {
+            if (urls.length() > 0) {
+                urls.append("\n");
+            }
+            urls.append("Link: ").append(matcher.group());
+        }
+        return urls.length() > 0 ? urls.toString() : null;
+    }
+
     private void createAndPersistTask(TaskExtractor.TaskExtractionResult result,
                                        String packageName, String notificationKey,
-                                       String deduplicationKey) {
+                                       String deduplicationKey, String senderName) {
         executorService.execute(() -> {
             try {
                 TaskDao taskDao = AppDatabase.getInstance(getApplicationContext()).taskDao();
@@ -157,21 +269,49 @@ public class NotificationCaptureService extends NotificationListenerService {
                     }
                 }
 
+                // Duplicate detection: check against existing pending tasks
+                List<Task> pendingTasks = taskDao.getPendingTasks();
+                Task duplicate = duplicateDetector.findDuplicate(result.taskTitle, result.taskDescription, pendingTasks);
+                if (duplicate != null) {
+                    // Append new notification text to existing duplicate task
+                    String existingDesc = duplicate.getDescription() != null ? duplicate.getDescription() : "";
+                    SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                    String timeStr = sdf.format(new Date(System.currentTimeMillis()));
+                    String newInfo = result.taskDescription != null ? result.taskDescription : "";
+                    String updatedDesc = existingDesc + "\n[" + timeStr + "] " + newInfo;
+                    duplicate.setDescription(updatedDesc);
+                    taskDao.updateTask(duplicate);
+                    return;
+                }
+
                 // Track this app as a known notification source
                 preferenceManager.addKnownApp(packageName);
 
+                // Apply smart categorization
+                String category = smartCategorizer.categorize(result.taskTitle, result.taskDescription);
+                String categoryPrefix = "[Category: " + category + "]\n";
+                String finalDescription = categoryPrefix + (result.taskDescription != null ? result.taskDescription : "");
+
                 Task task = new Task();
                 task.setTitle(result.taskTitle);
-                task.setDescription(result.taskDescription);
+                task.setDescription(finalDescription);
                 task.setSourceApp(packageName);
                 task.setDueDate(result.dueDateHint);
                 task.setCreatedAt(System.currentTimeMillis());
                 task.setStatus("pending");
                 task.setNotificationKey(notificationKey);
 
-                // Assign priority
-                int priority = priorityAssigner.assignPriority(
+                // Set assignee from sender name (messaging/email apps)
+                if (senderName != null && !senderName.isEmpty()) {
+                    task.setAssignee(senderName);
+                }
+
+                // Assign priority - use the higher priority between PriorityAssigner and SmartTaskCategorizer
+                int priorityFromAssigner = priorityAssigner.assignPriority(
                         packageName, result.taskTitle, result.taskDescription, result.dueDateHint);
+                int priorityFromCategorizer = smartCategorizer.suggestPriority(
+                        result.taskTitle, result.taskDescription, result.dueDateHint);
+                int priority = Math.min(priorityFromAssigner, priorityFromCategorizer);
                 task.setPriority(priority);
 
                 // Insert into database
@@ -190,7 +330,7 @@ public class NotificationCaptureService extends NotificationListenerService {
                 // Refresh widget to show new task
                 TaskWidgetProvider.refreshWidget(getApplicationContext());
 
-                Log.d(TAG, "Task created: " + task.getTitle() + " (priority: " + task.getPriorityLabel() + ")");
+                Log.d(TAG, "Task created: " + task.getTitle() + " (priority: " + task.getPriorityLabel() + ", category: " + category + ")");
             } catch (Exception e) {
                 Log.e(TAG, "Error creating task", e);
             }

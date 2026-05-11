@@ -198,4 +198,12 @@
     <!-- Weekly Summary -->
     <string name="weekly_summary_title">Weekly Task Summary</string>
     <string name="weekly_summary_body">You have %d pending tasks, %d overdue, %d completed this week</string>
+
+    <!-- Bulk Actions -->
+    <string name="bulk_complete_all">Complete All</string>
+    <string name="bulk_delete_all">Delete All</string>
+    <string name="bulk_change_priority">Change Priority</string>
+    <string name="bulk_selected_count">%d selected</string>
+    <string name="bulk_delete_confirm">Delete %d selected tasks?</string>
+    <string name="bulk_complete_confirm">%d tasks completed</string>
 </resources>

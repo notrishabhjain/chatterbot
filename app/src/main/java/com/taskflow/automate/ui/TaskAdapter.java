@@ -9,6 +9,7 @@ import android.provider.CalendarContract;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,12 +25,15 @@ import com.taskflow.automate.model.Tag;
 import com.taskflow.automate.model.Task;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
 
@@ -45,13 +49,22 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskStarToggle(Task task, int position);
     }
 
+    public interface OnTaskLongClickListener {
+        void onTaskLongClick(Task task, int position);
+    }
+
     private List<Task> tasks;
     private final OnTaskCompleteListener completeListener;
     private OnTaskClickListener clickListener;
     private OnTaskStarListener starListener;
+    private OnTaskLongClickListener longClickListener;
     private final SimpleDateFormat dateFormat;
     private Map<Long, List<Tag>> tagMap = new HashMap<>();
     private Map<Long, int[]> subtaskCountMap = new HashMap<>();
+
+    // Selection mode fields
+    private boolean selectionMode = false;
+    private Set<Integer> selectedPositions = new HashSet<>();
 
     public TaskAdapter(List<Task> tasks, OnTaskCompleteListener listener) {
         this.tasks = tasks;
@@ -67,12 +80,60 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         this.starListener = listener;
     }
 
+    public void setOnTaskLongClickListener(OnTaskLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
     public void setTagMap(Map<Long, List<Tag>> tagMap) {
         this.tagMap = tagMap;
     }
 
     public void setSubtaskCountMap(Map<Long, int[]> map) {
         this.subtaskCountMap = map;
+    }
+
+    // Selection mode methods
+    public void setSelectionMode(boolean enabled) {
+        this.selectionMode = enabled;
+        if (!enabled) {
+            selectedPositions.clear();
+        }
+        notifyDataSetChanged();
+    }
+
+    public boolean isSelectionMode() {
+        return selectionMode;
+    }
+
+    public Set<Integer> getSelectedPositions() {
+        return selectedPositions;
+    }
+
+    public List<Task> getSelectedTasks() {
+        List<Task> selected = new ArrayList<>();
+        for (int pos : selectedPositions) {
+            if (pos >= 0 && pos < tasks.size()) {
+                selected.add(tasks.get(pos));
+            }
+        }
+        return selected;
+    }
+
+    public void selectAll() {
+        selectedPositions.clear();
+        for (int i = 0; i < tasks.size(); i++) {
+            selectedPositions.add(i);
+        }
+        notifyDataSetChanged();
+    }
+
+    public void deselectAll() {
+        selectedPositions.clear();
+        notifyDataSetChanged();
+    }
+
+    public int getSelectedCount() {
+        return selectedPositions.size();
     }
 
     @NonNull
@@ -125,6 +186,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     class TaskViewHolder extends RecyclerView.ViewHolder {
 
         private final View priorityBar;
+        private final CheckBox checkboxSelect;
         private final TextView textTitle;
         private final TextView textDescription;
         private final TextView textSourceApp;
@@ -138,6 +200,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             priorityBar = itemView.findViewById(R.id.priority_bar);
+            checkboxSelect = itemView.findViewById(R.id.checkbox_select);
             textTitle = itemView.findViewById(R.id.text_title);
             textDescription = itemView.findViewById(R.id.text_description);
             textSourceApp = itemView.findViewById(R.id.text_source_app);
@@ -152,6 +215,29 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void bind(Task task, int position) {
             textTitle.setText(task.getTitle());
             textDescription.setText(task.getDescription());
+
+            // Handle selection mode
+            if (selectionMode) {
+                checkboxSelect.setVisibility(View.VISIBLE);
+                checkboxSelect.setChecked(selectedPositions.contains(position));
+                checkboxSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (isChecked) {
+                        selectedPositions.add(position);
+                    } else {
+                        selectedPositions.remove(position);
+                    }
+                });
+                // Highlight selected items
+                if (selectedPositions.contains(position)) {
+                    itemView.setAlpha(0.85f);
+                } else {
+                    itemView.setAlpha(1.0f);
+                }
+            } else {
+                checkboxSelect.setVisibility(View.GONE);
+                checkboxSelect.setOnCheckedChangeListener(null);
+                itemView.setAlpha(1.0f);
+            }
 
             if (task.getSourceApp() != null && !task.getSourceApp().isEmpty()) {
                 textSourceApp.setVisibility(View.VISIBLE);
@@ -281,10 +367,29 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 }
             });
 
+            // Click handling: in selection mode, toggle selection; otherwise open detail
             itemView.setOnClickListener(v -> {
-                if (clickListener != null) {
-                    clickListener.onTaskClick(task);
+                if (selectionMode) {
+                    boolean isSelected = selectedPositions.contains(position);
+                    if (isSelected) {
+                        selectedPositions.remove(position);
+                    } else {
+                        selectedPositions.add(position);
+                    }
+                    notifyItemChanged(position);
+                } else {
+                    if (clickListener != null) {
+                        clickListener.onTaskClick(task);
+                    }
                 }
+            });
+
+            // Long-press to enter selection mode
+            itemView.setOnLongClickListener(v -> {
+                if (!selectionMode && longClickListener != null) {
+                    longClickListener.onTaskLongClick(task, position);
+                }
+                return true;
             });
         }
     }
