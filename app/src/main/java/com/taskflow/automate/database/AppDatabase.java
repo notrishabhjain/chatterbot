@@ -7,12 +7,13 @@ import androidx.room.Room;
 import androidx.room.RoomDatabase;
 import androidx.room.TypeConverters;
 
+import com.taskflow.automate.model.Subtask;
 import com.taskflow.automate.model.Tag;
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.model.TaskTagCrossRef;
 import com.taskflow.automate.model.TeamMember;
 
-@Database(entities = {Task.class, TeamMember.class, Tag.class, TaskTagCrossRef.class}, version = 3, exportSchema = false)
+@Database(entities = {Task.class, TeamMember.class, Tag.class, TaskTagCrossRef.class, Subtask.class}, version = 4, exportSchema = false)
 @TypeConverters({Converters.class})
 public abstract class AppDatabase extends RoomDatabase {
 
@@ -23,6 +24,8 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract TeamMemberDao teamMemberDao();
 
     public abstract TagDao tagDao();
+
+    public abstract SubtaskDao subtaskDao();
 
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {

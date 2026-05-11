@@ -61,18 +61,47 @@ public class TaskExtractor {
             "check", "update", "share", "prepare", "fix",
             "look into", "get back", "let me know", "can you",
             "could you", "would you", "will you", "make sure",
+            // New English action words
+            "assign", "deliver", "coordinate", "arrange", "organize",
+            "handle", "resolve", "investigate", "implement", "finalize",
+            "prioritize", "escalate", "document", "test", "deploy",
+            "migrate", "integrate", "setup", "configure", "install",
+            "download", "upload", "backup", "restore", "monitor",
+            "track", "verify", "validate", "budget", "invoice",
+            "payment", "transfer", "book", "reserve", "order",
+            "purchase", "return", "exchange", "pickup", "drop",
+            "collect", "submit", "register", "apply", "renew",
+            "cancel", "reschedule",
             // Hindi (transliterated)
             "karo", "karna", "bhejo", "dekho", "batao", "kar do",
             "kar dena", "bhej do", "bhej dena", "check karo",
             "reply karo", "send karo", "complete karo", "jaldi",
             "zaruri", "zaroori", "jaruri", "important hai",
             "kal tak", "aaj", "abhi", "turant",
+            // New Hindi/Hinglish transliterated words
+            "bhejna", "dekhna", "banana", "likhna", "padhna",
+            "samjhana", "sikhana", "baat karo", "discuss karo",
+            "plan karo", "decide karo", "book karo", "order karo",
+            "payment karo", "transfer karo", "register karo",
+            "apply karo", "cancel karo", "update karo", "install karo",
+            "download karo", "setup karo", "fix karo", "resolve karo",
+            "test karo", "deploy karo", "jama karo", "collect karo",
+            "submit karo", "prepare karo", "arrange karo",
             // Hindi (Unicode)
             "\u0915\u0930\u094B", "\u0915\u0930\u0928\u093E", "\u092D\u0947\u091C\u094B",
             "\u0926\u0947\u0916\u094B", "\u092C\u0924\u093E\u0913",
             "\u091C\u0930\u0942\u0930\u0940", "\u091C\u0932\u094D\u0926\u0940",
             "\u092E\u0940\u091F\u093F\u0902\u0917", "\u0915\u0949\u0932",
-            "\u092F\u093E\u0926", "\u0930\u093F\u092E\u093E\u0907\u0902\u0921\u0930"
+            "\u092F\u093E\u0926", "\u0930\u093F\u092E\u093E\u0907\u0902\u0921\u0930",
+            // New Hindi Unicode keywords
+            "\u092D\u0947\u091C\u0928\u093E", "\u0926\u0947\u0916\u0928\u093E",
+            "\u092C\u0928\u093E\u0928\u093E", "\u0932\u093F\u0916\u0928\u093E",
+            "\u092A\u0922\u093C\u0928\u093E", "\u0938\u092E\u091D\u093E\u0928\u093E",
+            "\u0938\u093F\u0916\u093E\u0928\u093E", "\u092C\u0941\u0915",
+            "\u0911\u0930\u094D\u0921\u0930", "\u092A\u0947\u092E\u0947\u0902\u091F",
+            "\u091F\u094D\u0930\u093E\u0902\u0938\u092B\u0930", "\u0905\u092A\u0921\u0947\u091F",
+            "\u0907\u0902\u0938\u094D\u091F\u0949\u0932", "\u0921\u093E\u0909\u0928\u0932\u094B\u0921",
+            "\u0924\u0948\u092F\u093E\u0930", "\u091C\u092E\u093E", "\u0938\u092C\u092E\u093F\u091F"
     ));
 
     private static final Pattern TIME_PATTERN_AT = Pattern.compile(
