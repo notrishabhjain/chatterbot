@@ -1,22 +1,35 @@
 package com.taskflow.automate.service;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
+import androidx.core.app.NotificationCompat;
+
+import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.database.TaskDao;
 import com.taskflow.automate.model.Task;
+import com.taskflow.automate.receiver.NotificationDismissReceiver;
+import com.taskflow.automate.receiver.NotificationTaskReceiver;
 import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.DuplicateTaskDetector;
 import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
+import com.taskflow.automate.util.SelfForwardDetector;
 import com.taskflow.automate.util.SmartTaskCategorizer;
 import com.taskflow.automate.util.TaskExtractor;
 import com.taskflow.automate.widget.TaskWidgetProvider;
+
+import android.os.Parcelable;
 
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -36,6 +49,7 @@ public class NotificationCaptureService extends NotificationListenerService {
 
     private static final String TAG = "NotificationCapture";
     private static final long DEDUP_WINDOW_MS = 5 * 60 * 1000L; // 5 minutes
+    private static final String TASK_ACTION_CHANNEL_ID = "task_action_channel";
 
     private static final Set<String> MESSAGING_APPS = new HashSet<>(Arrays.asList(
             "com.whatsapp", "com.whatsapp.w4b",
@@ -120,6 +134,60 @@ public class NotificationCaptureService extends NotificationListenerService {
         String title = extras.getString(Notification.EXTRA_TITLE);
         String text = extras.getString(Notification.EXTRA_TEXT);
 
+        // WhatsApp-specific: extract content from MessagingStyle EXTRA_MESSAGES
+        String whatsAppSender = null;
+        if (isWhatsAppPackage(packageName)) {
+            Parcelable[] messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES);
+            if (messages != null && messages.length > 0) {
+                // Extract the last message's text and sender
+                Parcelable lastMsg = messages[messages.length - 1];
+                if (lastMsg instanceof Bundle) {
+                    Bundle msgBundle = (Bundle) lastMsg;
+                    CharSequence msgText = msgBundle.getCharSequence("text");
+                    CharSequence msgSender = msgBundle.getCharSequence("sender");
+                    if (msgText != null && msgText.length() > 0) {
+                        text = msgText.toString();
+                    }
+                    if (msgSender != null && msgSender.length() > 0) {
+                        title = msgSender.toString();
+                        whatsAppSender = msgSender.toString();
+                    }
+                }
+            }
+
+            // Check for EXTRA_CONVERSATION_TITLE (group chat name)
+            CharSequence conversationTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
+            if (conversationTitle != null && conversationTitle.length() > 0) {
+                title = conversationTitle.toString();
+            }
+
+            // Handle summary notifications with EXTRA_TEXT_LINES
+            CharSequence[] textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+            if (textLines != null && textLines.length > 0 && (text == null || text.isEmpty()
+                    || text.matches("\\d+\\s*(new\\s*)?messages?.*"))) {
+                StringBuilder combined = new StringBuilder();
+                for (CharSequence line : textLines) {
+                    if (line != null && line.length() > 0) {
+                        if (combined.length() > 0) {
+                            combined.append("\n");
+                        }
+                        combined.append(line);
+                    }
+                }
+                if (combined.length() > 0) {
+                    text = combined.toString();
+                }
+            }
+        }
+
+        // Prefer EXTRA_BIG_TEXT over EXTRA_TEXT when available and longer
+        CharSequence bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
+        if (bigText != null && bigText.length() > 0) {
+            if (text == null || bigText.length() > text.length()) {
+                text = bigText.toString();
+            }
+        }
+
         // For messaging apps: use title as sender/assignee
         String senderName = null;
         if (MESSAGING_APPS.contains(packageName)) {
@@ -164,6 +232,24 @@ public class NotificationCaptureService extends NotificationListenerService {
             result.taskDescription = desc + "\n" + urls;
         }
 
+        // WhatsApp self-forward detection - use whatsAppSender (not title) to avoid
+        // matching against the group conversation title
+        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(whatsAppSender)) {
+            createSelfForwardTask(result, packageName, sbn.getKey(), text);
+            return;
+        }
+
+        // Post companion notification with "Create Task" action button
+        // When action button is enabled, let the user decide - do NOT auto-create the task
+        if (preferenceManager.isTaskActionButtonEnabled()) {
+            postTaskActionNotification(
+                    result.taskTitle != null ? result.taskTitle : title,
+                    text,
+                    packageName);
+            return;
+        }
+
+        // Auto-create task only when action button feature is disabled
         // Clean up old entries before dedup check
         cleanupDeduplicationMap();
 
@@ -370,5 +456,137 @@ public class NotificationCaptureService extends NotificationListenerService {
                 deduplicationMap.remove(entry.getKey());
             }
         }
+    }
+
+    private boolean isWhatsAppPackage(String packageName) {
+        return "com.whatsapp".equals(packageName) || "com.whatsapp.w4b".equals(packageName);
+    }
+
+    /**
+     * Checks if the notification sender matches the user's own WhatsApp name (self-forward).
+     * Uses the sender name from EXTRA_MESSAGES (not the conversation title) to avoid
+     * false positives in group chats.
+     */
+    private boolean isSelfForwardedMessage(String sender) {
+        String selfName = preferenceManager.getWhatsAppSelfName();
+        return SelfForwardDetector.isSelfForwardedMessage(sender, selfName);
+    }
+
+    /**
+     * Creates a high-priority task from a self-forwarded WhatsApp message.
+     * Skips normal deduplication since the user intentionally forwarded the message.
+     */
+    private void createSelfForwardTask(TaskExtractor.TaskExtractionResult result,
+                                        String packageName, String notificationKey, String text) {
+        executorService.execute(() -> {
+            try {
+                TaskDao taskDao = AppDatabase.getInstance(getApplicationContext()).taskDao();
+
+                // Track this app as a known notification source
+                preferenceManager.addKnownApp(packageName);
+
+                // Apply smart categorization
+                String category = smartCategorizer.categorize(result.taskTitle, result.taskDescription);
+                String categoryPrefix = "[Category: " + category + "]\n";
+                String finalDescription = categoryPrefix + (result.taskDescription != null ? result.taskDescription : "");
+
+                Task task = new Task();
+                task.setTitle(result.taskTitle);
+                task.setDescription(finalDescription);
+                task.setSourceApp("WhatsApp (Self-Forward)");
+                task.setDueDate(result.dueDateHint);
+                task.setCreatedAt(System.currentTimeMillis());
+                task.setStatus("pending");
+                task.setNotificationKey(notificationKey);
+                task.setPriority(1); // HIGH priority for self-forwarded messages
+
+                // Insert into database
+                long taskId = taskDao.insertTask(task);
+                task.setId(taskId);
+
+                // Schedule reminder
+                ReminderScheduler.scheduleReminder(getApplicationContext(), task);
+
+                // Update badge count
+                BadgeUtils.updateBadgeCount(getApplicationContext());
+
+                // Refresh widget
+                TaskWidgetProvider.refreshWidget(getApplicationContext());
+
+                Log.d(TAG, "Self-forward task created: " + task.getTitle() + " (HIGH priority)");
+            } catch (Exception e) {
+                Log.e(TAG, "Error creating self-forward task", e);
+            }
+        });
+    }
+
+    /**
+     * Posts a companion notification with a "Create Task" action button for the captured notification.
+     */
+    private void postTaskActionNotification(String title, String text, String packageName) {
+        NotificationManager manager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        if (manager == null) {
+            return;
+        }
+
+        // Create notification channel
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    TASK_ACTION_CHANNEL_ID,
+                    getString(R.string.task_action_channel_name),
+                    NotificationManager.IMPORTANCE_LOW);
+            channel.setDescription(getString(R.string.task_action_channel_description));
+            channel.setShowBadge(false);
+            manager.createNotificationChannel(channel);
+        }
+
+        // Generate unique notification ID based on content and time bucket (per minute)
+        int notificationId = (packageName + title + System.currentTimeMillis() / 60000).hashCode();
+
+        // Create "Create Task" action intent
+        Intent createTaskIntent = new Intent(this, NotificationTaskReceiver.class);
+        createTaskIntent.setAction(NotificationTaskReceiver.ACTION_CREATE_TASK);
+        createTaskIntent.putExtra(NotificationTaskReceiver.EXTRA_TASK_TITLE, title);
+        createTaskIntent.putExtra(NotificationTaskReceiver.EXTRA_TASK_DESCRIPTION, text != null ? text : "");
+        createTaskIntent.putExtra(NotificationTaskReceiver.EXTRA_SOURCE_APP, packageName);
+        createTaskIntent.putExtra(NotificationTaskReceiver.EXTRA_NOTIFICATION_ID, notificationId);
+
+        PendingIntent createTaskPendingIntent = PendingIntent.getBroadcast(
+                this, notificationId, createTaskIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        // Create "Dismiss" action intent
+        Intent dismissIntent = new Intent(this, NotificationDismissReceiver.class);
+        dismissIntent.putExtra(NotificationTaskReceiver.EXTRA_NOTIFICATION_ID, notificationId);
+
+        PendingIntent dismissPendingIntent = PendingIntent.getBroadcast(
+                this, notificationId + 1, dismissIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
+        // Build the notification
+        String contentText = title != null ? title : "";
+        if (text != null && !text.isEmpty()) {
+            contentText = contentText + ": " + text;
+        }
+        // Truncate preview
+        if (contentText.length() > 100) {
+            contentText = contentText.substring(0, 97) + "...";
+        }
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(this, TASK_ACTION_CHANNEL_ID)
+                .setSmallIcon(android.R.drawable.ic_input_add)
+                .setContentTitle(getString(R.string.add_as_task_title))
+                .setContentText(contentText)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setAutoCancel(true)
+                .setTimeoutAfter(60000) // Auto-dismiss after 60 seconds
+                .addAction(android.R.drawable.ic_input_add,
+                        getString(R.string.notification_action_create_task),
+                        createTaskPendingIntent)
+                .addAction(android.R.drawable.ic_menu_close_clear_cancel,
+                        getString(R.string.notification_action_dismiss),
+                        dismissPendingIntent);
+
+        manager.notify(notificationId, builder.build());
     }
 }

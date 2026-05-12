@@ -101,6 +101,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Notification Task Action Receiver -->
+        <receiver
+            android:name=".receiver.NotificationTaskReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.taskflow.automate.ACTION_CREATE_TASK_FROM_NOTIFICATION" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Notification Dismiss Receiver -->
+        <receiver
+            android:name=".receiver.NotificationDismissReceiver"
+            android:exported="false" />
+
         <!-- Widget Service -->
         <service
             android:name=".widget.TaskWidgetService"

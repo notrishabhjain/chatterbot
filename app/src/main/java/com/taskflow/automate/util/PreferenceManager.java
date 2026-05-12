@@ -24,6 +24,8 @@ public class PreferenceManager {
     private static final String KEY_EMAIL_RECIPIENT = "email_recipient";
     private static final String KEY_EMAIL_FREQUENCY = "email_frequency";
     private static final String KEY_QUICK_ADD_ENABLED = "quick_add_enabled";
+    private static final String KEY_WHATSAPP_SELF_NAME = "whatsapp_self_name";
+    private static final String KEY_SHOW_TASK_ACTION_BUTTON = "show_task_action_button";
 
     private static final int DEFAULT_HIGH_INTERVAL = 30;
     private static final int DEFAULT_MEDIUM_INTERVAL = 60;
@@ -153,5 +155,23 @@ public class PreferenceManager {
 
     public void setQuickAddEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_QUICK_ADD_ENABLED, enabled).apply();
+    }
+
+    // WhatsApp Self-Forward Detection
+    public String getWhatsAppSelfName() {
+        return prefs.getString(KEY_WHATSAPP_SELF_NAME, null);
+    }
+
+    public void setWhatsAppSelfName(String name) {
+        prefs.edit().putString(KEY_WHATSAPP_SELF_NAME, name).apply();
+    }
+
+    // Task Action Button on Notifications
+    public boolean isTaskActionButtonEnabled() {
+        return prefs.getBoolean(KEY_SHOW_TASK_ACTION_BUTTON, true);
+    }
+
+    public void setTaskActionButtonEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_SHOW_TASK_ACTION_BUTTON, enabled).apply();
     }
 }

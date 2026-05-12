@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
@@ -17,6 +19,8 @@ import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.taskflow.automate.R;
 import com.taskflow.automate.util.PreferenceManager;
 
@@ -54,6 +58,8 @@ public class SettingsActivity extends AppCompatActivity {
         setupAppToggles();
         setupReminderIntervals();
         setupEmailDigest();
+        setupWhatsAppSettings();
+        setupTaskActionButton();
     }
 
     private void setupToolbar() {
@@ -245,5 +251,51 @@ public class SettingsActivity extends AppCompatActivity {
                 startActivity(new Intent(this, EmailConfigActivity.class));
             });
         }
+    }
+
+    private void setupWhatsAppSettings() {
+        TextInputLayout whatsappNameLayout = findViewById(R.id.layout_whatsapp_self_name);
+        TextInputEditText whatsappNameInput = findViewById(R.id.input_whatsapp_self_name);
+
+        if (whatsappNameLayout == null || whatsappNameInput == null) {
+            return;
+        }
+
+        String savedName = preferenceManager.getWhatsAppSelfName();
+        if (savedName != null) {
+            whatsappNameInput.setText(savedName);
+        }
+
+        whatsappNameInput.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String name = s.toString().trim();
+                if (!name.isEmpty()) {
+                    preferenceManager.setWhatsAppSelfName(name);
+                } else {
+                    preferenceManager.setWhatsAppSelfName(null);
+                }
+            }
+        });
+    }
+
+    private void setupTaskActionButton() {
+        SwitchCompat toggleTaskAction = findViewById(R.id.switch_task_action_button);
+        if (toggleTaskAction == null) {
+            return;
+        }
+
+        toggleTaskAction.setChecked(preferenceManager.isTaskActionButtonEnabled());
+        toggleTaskAction.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            preferenceManager.setTaskActionButtonEnabled(isChecked);
+        });
     }
 }

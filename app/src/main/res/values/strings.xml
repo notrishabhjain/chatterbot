@@ -206,4 +206,16 @@
     <string name="bulk_selected_count">%d selected</string>
     <string name="bulk_delete_confirm">Delete %d selected tasks?</string>
     <string name="bulk_complete_confirm">%d tasks completed</string>
+
+    <!-- Notification Task Action -->
+    <string name="notification_action_create_task">Create Task</string>
+    <string name="notification_action_dismiss">Dismiss</string>
+    <string name="task_created_from_notification">Task created from notification</string>
+    <string name="whatsapp_self_name_label">Your WhatsApp Name</string>
+    <string name="whatsapp_self_name_hint">Enter your WhatsApp display name for self-forward detection</string>
+    <string name="task_action_channel_name">Task Action Buttons</string>
+    <string name="task_action_channel_description">Shows Create Task buttons on captured notifications</string>
+    <string name="self_forward_detected">Self-forward task created</string>
+    <string name="task_action_button_label">Show Task Action on Notifications</string>
+    <string name="add_as_task_title">Add as Task?</string>
 </resources>

@@ -430,4 +430,54 @@ public class TaskExtractorTest {
                 taskExtractor.extractTask("Lead", "\u0936\u0941\u0930\u0942 \u0915\u0930\u094B", "com.some.app");
         assertTrue(result.isActionable);
     }
+
+    // --- WhatsApp edge case tests ---
+
+    @Test
+    public void whatsApp_nullTitle_withMessage_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask(null, "Hey, can you send the report?", "com.whatsapp");
+        assertTrue(result.isActionable);
+        assertEquals("Notification Task", result.taskTitle);
+        assertEquals("Hey, can you send the report?", result.taskDescription);
+    }
+
+    @Test
+    public void whatsApp_nullTitle_emptyText_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask(null, "", "com.whatsapp");
+        assertFalse(result.isActionable);
+    }
+
+    @Test
+    public void whatsApp_nullTitle_nullText_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask(null, null, "com.whatsapp");
+        assertFalse(result.isActionable);
+    }
+
+    @Test
+    public void whatsAppBusiness_anyMessage_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask("Business Contact", "Your order is ready for pickup", "com.whatsapp.w4b");
+        assertTrue(result.isActionable);
+        assertEquals("Business Contact", result.taskTitle);
+        assertEquals("Your order is ready for pickup", result.taskDescription);
+    }
+
+    @Test
+    public void whatsAppBusiness_nullTitle_withMessage_returnsActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask(null, "Please confirm your appointment", "com.whatsapp.w4b");
+        assertTrue(result.isActionable);
+        assertEquals("Notification Task", result.taskTitle);
+        assertEquals("Please confirm your appointment", result.taskDescription);
+    }
+
+    @Test
+    public void whatsAppBusiness_nullTitle_emptyText_returnsNotActionable() {
+        TaskExtractor.TaskExtractionResult result =
+                taskExtractor.extractTask(null, "", "com.whatsapp.w4b");
+        assertFalse(result.isActionable);
+    }
 }
