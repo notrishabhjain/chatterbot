@@ -336,6 +336,46 @@
 
             </com.google.android.material.card.MaterialCardView>
 
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="@color/textSecondary" />
+
+            <!-- Learned Keywords Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/learned_keywords_header"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/textPrimary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/learned_keywords_description"
+                android:textSize="14sp"
+                android:textColor="@color/textSecondary" />
+
+            <TextView
+                android:id="@+id/text_learned_keywords_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="14sp"
+                android:textColor="@color/textPrimary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_clear_learned_keywords"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/clear_learned_keywords"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
+
         </LinearLayout>
     </ScrollView>
 

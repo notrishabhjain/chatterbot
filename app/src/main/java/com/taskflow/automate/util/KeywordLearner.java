@@ -11,6 +11,7 @@ import java.util.Set;
 public class KeywordLearner {
 
     private static final Set<String> STOP_WORDS = new HashSet<>(Arrays.asList(
+        // Common English stop words
         "a", "an", "the", "is", "are", "was", "were", "be", "been", "being",
         "have", "has", "had", "do", "does", "did", "will", "would", "could",
         "should", "may", "might", "shall", "can", "need", "dare", "ought",
@@ -23,7 +24,11 @@ public class KeywordLearner {
         "because", "but", "and", "or", "if", "while", "about", "up", "down",
         "that", "this", "these", "those", "am", "it", "its", "my", "me",
         "we", "our", "you", "your", "he", "she", "they", "them", "his", "her",
-        "i", "what", "which", "who", "whom", "whose", "get", "got", "make"
+        "i", "what", "which", "who", "whom", "whose", "get", "got", "make",
+        // Common task-related words already in ACTION_KEYWORDS - prevent redundant learning
+        "meeting", "call", "update", "review", "check", "send", "reply",
+        "complete", "schedule", "fix", "prepare", "share", "confirm",
+        "submit", "deploy", "test"
     ));
 
     /**
@@ -43,7 +48,7 @@ public class KeywordLearner {
         for (String token : tokens) {
             token = token.trim();
             // Skip short words, stop words, and pure numbers
-            if (token.length() < 3) continue;
+            if (token.length() < 4) continue;
             if (STOP_WORDS.contains(token)) continue;
             if (token.matches("\\d+")) continue;
             keywords.add(token);

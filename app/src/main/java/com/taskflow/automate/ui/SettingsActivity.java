@@ -12,12 +12,14 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -61,6 +63,7 @@ public class SettingsActivity extends AppCompatActivity {
         setupWhatsAppSettings();
         setupWhatsAppMonitor();
         setupTaskActionButton();
+        setupLearnedKeywords();
     }
 
     private void setupToolbar() {
@@ -340,6 +343,24 @@ public class SettingsActivity extends AppCompatActivity {
                     preferenceManager.setWhatsAppMonitoredChat(null);
                 }
             }
+        });
+    }
+
+    private void setupLearnedKeywords() {
+        TextView textCount = findViewById(R.id.text_learned_keywords_count);
+        MaterialButton btnClear = findViewById(R.id.btn_clear_learned_keywords);
+
+        if (textCount == null || btnClear == null) {
+            return;
+        }
+
+        int count = preferenceManager.getLearnedKeywordsCount();
+        textCount.setText(getString(R.string.learned_keywords_count, count));
+
+        btnClear.setOnClickListener(v -> {
+            preferenceManager.clearLearnedKeywords();
+            textCount.setText(getString(R.string.learned_keywords_count, 0));
+            Toast.makeText(this, R.string.learned_keywords_cleared, Toast.LENGTH_SHORT).show();
         });
     }
 }

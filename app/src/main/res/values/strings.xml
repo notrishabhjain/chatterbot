@@ -228,4 +228,11 @@
     <string name="whatsapp_monitored_chat_label">Monitored Chat</string>
     <string name="whatsapp_monitored_chat_hint">Enter exact contact or group name</string>
     <string name="whatsapp_monitor_description">Messages from the selected chat will automatically create tasks. Enter the name exactly as it appears in your WhatsApp notifications.</string>
+
+    <!-- Learned Keywords -->
+    <string name="learned_keywords_header">Learned Keywords</string>
+    <string name="learned_keywords_description">Keywords learned from your manually created tasks are used to improve notification detection.</string>
+    <string name="learned_keywords_count">%d keywords learned</string>
+    <string name="clear_learned_keywords">Clear Learned Keywords</string>
+    <string name="learned_keywords_cleared">Learned keywords cleared</string>
 </resources>

@@ -200,10 +200,30 @@ public class PreferenceManager {
         return new HashSet<>(prefs.getStringSet(KEY_LEARNED_KEYWORDS, new HashSet<>()));
     }
 
+    private static final int MAX_LEARNED_KEYWORDS = 200;
+
     public void addLearnedKeywords(Set<String> keywords) {
         Set<String> existing = getLearnedKeywords();
         existing.addAll(keywords);
+        // Cap at maximum size to prevent unbounded growth
+        if (existing.size() > MAX_LEARNED_KEYWORDS) {
+            // Keep only the most recent keywords (trim to max size)
+            Set<String> trimmed = new HashSet<>();
+            int count = 0;
+            for (String keyword : existing) {
+                trimmed.add(keyword);
+                count++;
+                if (count >= MAX_LEARNED_KEYWORDS) {
+                    break;
+                }
+            }
+            existing = trimmed;
+        }
         prefs.edit().putStringSet(KEY_LEARNED_KEYWORDS, existing).apply();
+    }
+
+    public int getLearnedKeywordsCount() {
+        return prefs.getStringSet(KEY_LEARNED_KEYWORDS, new HashSet<>()).size();
     }
 
     public void clearLearnedKeywords() {

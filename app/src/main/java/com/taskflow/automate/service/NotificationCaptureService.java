@@ -114,6 +114,10 @@ public class NotificationCaptureService extends NotificationListenerService {
             return;
         }
 
+        // Hot-reload learned keywords on each notification
+        Set<String> learnedKeywords = preferenceManager.getLearnedKeywords();
+        taskExtractor.setAdditionalKeywords(learnedKeywords);
+
         String packageName = sbn.getPackageName();
 
         // Skip our own notifications to prevent self-capture feedback loop
@@ -217,6 +221,30 @@ public class NotificationCaptureService extends NotificationListenerService {
             return;
         }
 
+        // WhatsApp self-forward detection - check BEFORE the monitor gate so self-forwards
+        // are always processed regardless of the monitor setting.
+        // Uses whatsAppSender (not title) to avoid matching against group conversation title.
+        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(whatsAppSender)) {
+            TaskExtractor.TaskExtractionResult selfResult = taskExtractor.extractTask(title, text, packageName);
+            if (!selfResult.isActionable) {
+                selfResult.isActionable = true;
+                selfResult.taskTitle = title != null ? title : "WhatsApp Task";
+                selfResult.taskDescription = text != null ? text : "";
+            }
+            if (enhancedDescription != null && !enhancedDescription.isEmpty()) {
+                if (selfResult.taskDescription == null || enhancedDescription.length() > selfResult.taskDescription.length()) {
+                    selfResult.taskDescription = enhancedDescription;
+                }
+            }
+            String selfUrls = extractUrls(text);
+            if (selfUrls != null && !selfUrls.isEmpty()) {
+                String desc = selfResult.taskDescription != null ? selfResult.taskDescription : "";
+                selfResult.taskDescription = desc + "\n" + selfUrls;
+            }
+            createSelfForwardTask(selfResult, packageName, sbn.getKey(), text);
+            return;
+        }
+
         // WhatsApp Chat Monitor: filter notifications to only process the monitored chat
         boolean forceCreateTask = false;
         if (isWhatsAppPackage(packageName) && preferenceManager.isWhatsAppMonitorEnabled()) {
@@ -268,13 +296,6 @@ public class NotificationCaptureService extends NotificationListenerService {
         if (urls != null && !urls.isEmpty()) {
             String desc = result.taskDescription != null ? result.taskDescription : "";
             result.taskDescription = desc + "\n" + urls;
-        }
-
-        // WhatsApp self-forward detection - use whatsAppSender (not title) to avoid
-        // matching against the group conversation title
-        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(whatsAppSender)) {
-            createSelfForwardTask(result, packageName, sbn.getKey(), text);
-            return;
         }
 
         // Post companion notification with "Create Task" action button
