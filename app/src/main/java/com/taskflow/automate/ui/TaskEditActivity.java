@@ -98,7 +98,8 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        executor.shutdown();
+        // Do NOT shut down executor here - pending async operations (save, load)
+        // may still need it to complete. The executor will be GC'd naturally.
     }
 
     @Override

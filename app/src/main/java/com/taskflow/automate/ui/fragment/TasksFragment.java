@@ -37,6 +37,8 @@ import com.taskflow.automate.ui.SwipeCallback;
 import com.taskflow.automate.ui.TaskAdapter;
 import com.taskflow.automate.ui.TaskEditActivity;
 import com.taskflow.automate.util.BadgeUtils;
+import com.taskflow.automate.util.KeywordLearner;
+import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
 import com.taskflow.automate.widget.TaskWidgetProvider;
@@ -49,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -124,7 +127,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        executor.shutdown();
+        // Do NOT shut down executor here - pending Snackbar callbacks may still need it
+        // to persist task completions to the database. The executor will be GC'd naturally.
     }
 
     private void setupSearchAndFilter(View view) {
@@ -339,25 +343,30 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         }
 
         final int count = selected.size();
-        executor.execute(() -> {
-            for (Task task : selected) {
-                AppDatabase.getInstance(requireContext())
-                        .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
-                ReminderScheduler.cancelReminder(requireContext(), task.getId());
-            }
-            BadgeUtils.updateBadgeCount(requireContext());
-            TaskWidgetProvider.refreshWidget(requireContext());
+        final android.content.Context appContext = requireContext().getApplicationContext();
+        try {
+            executor.execute(() -> {
+                for (Task task : selected) {
+                    AppDatabase.getInstance(appContext)
+                            .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                    ReminderScheduler.cancelReminder(appContext, task.getId());
+                }
+                BadgeUtils.updateBadgeCount(appContext);
+                TaskWidgetProvider.refreshWidget(appContext);
 
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    exitSelectionMode();
-                    loadTasks();
-                    Snackbar.make(requireView(),
-                            getString(R.string.bulk_complete_confirm, count),
-                            Snackbar.LENGTH_LONG).setAnchorView(fabAddTask).show();
-                });
-            }
-        });
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        exitSelectionMode();
+                        loadTasks();
+                        Snackbar.make(requireView(),
+                                getString(R.string.bulk_complete_confirm, count),
+                                Snackbar.LENGTH_LONG).setAnchorView(fabAddTask).show();
+                    });
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore
+        }
     }
 
     private void bulkDeleteSelected() {
@@ -367,25 +376,30 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
             return;
         }
 
+        final android.content.Context appContext = requireContext().getApplicationContext();
         new AlertDialog.Builder(requireContext())
                 .setMessage(getString(R.string.bulk_delete_confirm, selected.size()))
                 .setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                    executor.execute(() -> {
-                        for (Task task : selected) {
-                            AppDatabase.getInstance(requireContext())
-                                    .taskDao().deleteTask(task.getId());
-                            ReminderScheduler.cancelReminder(requireContext(), task.getId());
-                        }
-                        BadgeUtils.updateBadgeCount(requireContext());
-                        TaskWidgetProvider.refreshWidget(requireContext());
+                    try {
+                        executor.execute(() -> {
+                            for (Task task : selected) {
+                                AppDatabase.getInstance(appContext)
+                                        .taskDao().deleteTask(task.getId());
+                                ReminderScheduler.cancelReminder(appContext, task.getId());
+                            }
+                            BadgeUtils.updateBadgeCount(appContext);
+                            TaskWidgetProvider.refreshWidget(appContext);
 
-                        if (getActivity() != null) {
-                            getActivity().runOnUiThread(() -> {
-                                exitSelectionMode();
-                                loadTasks();
-                            });
-                        }
-                    });
+                            if (getActivity() != null) {
+                                getActivity().runOnUiThread(() -> {
+                                    exitSelectionMode();
+                                    loadTasks();
+                                });
+                            }
+                        });
+                    } catch (java.util.concurrent.RejectedExecutionException e) {
+                        // Executor shut down, ignore
+                    }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -404,24 +418,29 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                 getString(R.string.priority_low)
         };
 
+        final android.content.Context appContext = requireContext().getApplicationContext();
         new AlertDialog.Builder(requireContext())
                 .setTitle(R.string.bulk_change_priority)
                 .setItems(priorityOptions, (dialog, which) -> {
                     int newPriority = which + 1; // 1=High, 2=Medium, 3=Low
-                    executor.execute(() -> {
-                        for (Task task : selected) {
-                            task.setPriority(newPriority);
-                            AppDatabase.getInstance(requireContext())
-                                    .taskDao().updateTask(task);
-                        }
+                    try {
+                        executor.execute(() -> {
+                            for (Task task : selected) {
+                                task.setPriority(newPriority);
+                                AppDatabase.getInstance(appContext)
+                                        .taskDao().updateTask(task);
+                            }
 
-                        if (getActivity() != null) {
-                            getActivity().runOnUiThread(() -> {
-                                exitSelectionMode();
-                                loadTasks();
-                            });
-                        }
-                    });
+                            if (getActivity() != null) {
+                                getActivity().runOnUiThread(() -> {
+                                    exitSelectionMode();
+                                    loadTasks();
+                                });
+                            }
+                        });
+                    } catch (java.util.concurrent.RejectedExecutionException e) {
+                        // Executor shut down, ignore
+                    }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
@@ -432,50 +451,57 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
     }
 
     private void loadFilteredTasks() {
-        executor.execute(() -> {
-            List<Task> tasks;
-            if (!currentSearchQuery.isEmpty()) {
-                tasks = AppDatabase.getInstance(requireContext())
-                        .taskDao().searchTasks(currentSearchQuery);
-                // Apply priority filter client-side if both active
-                if (selectedPriorityFilter > 0) {
-                    List<Task> filtered = new ArrayList<>();
-                    for (Task t : tasks) {
-                        if (t.getPriority() == selectedPriorityFilter) {
-                            filtered.add(t);
+        final android.content.Context ctx = getContext();
+        if (ctx == null) return;
+        final android.content.Context appContext = ctx.getApplicationContext();
+        try {
+            executor.execute(() -> {
+                List<Task> tasks;
+                if (!currentSearchQuery.isEmpty()) {
+                    tasks = AppDatabase.getInstance(appContext)
+                            .taskDao().searchTasks(currentSearchQuery);
+                    // Apply priority filter client-side if both active
+                    if (selectedPriorityFilter > 0) {
+                        List<Task> filtered = new ArrayList<>();
+                        for (Task t : tasks) {
+                            if (t.getPriority() == selectedPriorityFilter) {
+                                filtered.add(t);
+                            }
                         }
+                        tasks = filtered;
                     }
-                    tasks = filtered;
+                } else if (selectedPriorityFilter > 0) {
+                    tasks = AppDatabase.getInstance(appContext)
+                            .taskDao().getTasksByPriority(selectedPriorityFilter);
+                } else {
+                    tasks = AppDatabase.getInstance(appContext)
+                            .taskDao().getAllTasksByPriorityWithStarred();
                 }
-            } else if (selectedPriorityFilter > 0) {
-                tasks = AppDatabase.getInstance(requireContext())
-                        .taskDao().getTasksByPriority(selectedPriorityFilter);
-            } else {
-                tasks = AppDatabase.getInstance(requireContext())
-                        .taskDao().getAllTasksByPriorityWithStarred();
-            }
 
-            // Pre-load subtask counts
-            Map<Long, int[]> countMap = new HashMap<>();
-            for (Task t : tasks) {
-                int total = AppDatabase.getInstance(requireContext()).subtaskDao().getTotalSubtaskCount(t.getId());
-                if (total > 0) {
-                    int completed = AppDatabase.getInstance(requireContext()).subtaskDao().getCompletedSubtaskCount(t.getId());
-                    countMap.put(t.getId(), new int[]{completed, total});
+                // Pre-load subtask counts
+                Map<Long, int[]> countMap = new HashMap<>();
+                for (Task t : tasks) {
+                    int total = AppDatabase.getInstance(appContext).subtaskDao().getTotalSubtaskCount(t.getId());
+                    if (total > 0) {
+                        int completed = AppDatabase.getInstance(appContext).subtaskDao().getCompletedSubtaskCount(t.getId());
+                        countMap.put(t.getId(), new int[]{completed, total});
+                    }
                 }
-            }
 
-            final List<Task> result = tasks;
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    taskList.clear();
-                    taskList.addAll(result);
-                    taskAdapter.setSubtaskCountMap(countMap);
-                    taskAdapter.updateTasks(taskList);
-                    updateEmptyState();
-                });
-            }
-        });
+                final List<Task> result = tasks;
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        taskList.clear();
+                        taskList.addAll(result);
+                        taskAdapter.setSubtaskCountMap(countMap);
+                        taskAdapter.updateTasks(taskList);
+                        updateEmptyState();
+                    });
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore load request
+        }
     }
 
     private void updateEmptyState() {
@@ -520,6 +546,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         taskAdapter.removeTask(position);
         updateEmptyState();
 
+        final android.content.Context appContext = requireContext().getApplicationContext();
+
         Snackbar snackbar = Snackbar.make(requireView(), R.string.task_completed_message, 5000);
         snackbar.setAction(R.string.undo, v -> {
             taskAdapter.addTask(position, task);
@@ -529,22 +557,40 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
             @Override
             public void onDismissed(Snackbar transientBottomBar, int event) {
                 if (event != DISMISS_EVENT_ACTION) {
-                    executor.execute(() -> {
-                        AppDatabase.getInstance(requireContext())
-                                .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
-                        ReminderScheduler.cancelReminder(requireContext(), task.getId());
-                        BadgeUtils.updateBadgeCount(requireContext());
+                    try {
+                        executor.execute(() -> {
+                            AppDatabase.getInstance(appContext)
+                                    .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                            ReminderScheduler.cancelReminder(appContext, task.getId());
+                            BadgeUtils.updateBadgeCount(appContext);
 
-                        // Handle recurring tasks
-                        RecurringTaskManager recurringManager = new RecurringTaskManager();
-                        Task nextTask = recurringManager.createNextRecurrence(task);
-                        if (nextTask != null) {
-                            AppDatabase.getInstance(requireContext()).taskDao().insertTask(nextTask);
-                        }
+                            // Handle recurring tasks
+                            RecurringTaskManager recurringManager = new RecurringTaskManager();
+                            Task nextTask = recurringManager.createNextRecurrence(task);
+                            if (nextTask != null) {
+                                AppDatabase.getInstance(appContext).taskDao().insertTask(nextTask);
+                            }
 
-                        // Refresh widget to reflect completed task
-                        TaskWidgetProvider.refreshWidget(requireContext());
-                    });
+                            // Refresh widget to reflect completed task
+                            TaskWidgetProvider.refreshWidget(appContext);
+                        });
+                    } catch (java.util.concurrent.RejectedExecutionException e) {
+                        // Executor was shut down - use a temporary executor to ensure DB write completes
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            AppDatabase.getInstance(appContext)
+                                    .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                            ReminderScheduler.cancelReminder(appContext, task.getId());
+                            BadgeUtils.updateBadgeCount(appContext);
+
+                            RecurringTaskManager recurringManager = new RecurringTaskManager();
+                            Task nextTask = recurringManager.createNextRecurrence(task);
+                            if (nextTask != null) {
+                                AppDatabase.getInstance(appContext).taskDao().insertTask(nextTask);
+                            }
+
+                            TaskWidgetProvider.refreshWidget(appContext);
+                        });
+                    }
                 }
             }
         });
@@ -606,28 +652,41 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
 
     private void applySnooze(Task task, int position, long snoozeTime) {
         task.setDueDate(snoozeTime);
-        executor.execute(() -> {
-            AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    taskAdapter.notifyItemChanged(position);
-                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
-                    String msg = getString(R.string.snoozed_until, sdf.format(new Date(snoozeTime)));
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
+        final android.content.Context appContext = requireContext().getApplicationContext();
+        try {
+            executor.execute(() -> {
+                AppDatabase.getInstance(appContext).taskDao().updateTask(task);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        taskAdapter.notifyItemChanged(position);
+                        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
+                        String msg = getString(R.string.snoozed_until, sdf.format(new Date(snoozeTime)));
+                        android.content.Context ctx = getContext();
+                        if (ctx != null) {
+                            Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore
+        }
     }
 
     @Override
     public void onTaskStarToggle(Task task, int position) {
         task.setStarred(!task.isStarred());
-        executor.execute(() -> {
-            AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> loadTasks());
-            }
-        });
+        final android.content.Context appContext = requireContext().getApplicationContext();
+        try {
+            executor.execute(() -> {
+                AppDatabase.getInstance(appContext).taskDao().updateTask(task);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> loadTasks());
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore
+        }
     }
 
     private void showAddTaskDialog() {
@@ -714,14 +773,22 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         task.setRecurrenceInterval(1);
                     }
 
+                    final android.content.Context appContext = requireContext().getApplicationContext();
                     executor.execute(() -> {
-                        long id = AppDatabase.getInstance(requireContext()).taskDao().insertTask(task);
+                        long id = AppDatabase.getInstance(appContext).taskDao().insertTask(task);
                         task.setId(id);
                         if (selectedDueDate[0] != null) {
-                            ReminderScheduler.scheduleReminder(requireContext(), task);
+                            ReminderScheduler.scheduleReminder(appContext, task);
                         }
+
+                        // Learn keywords from manually added tasks
+                        Set<String> keywords = KeywordLearner.extractKeywords(title, description);
+                        if (!keywords.isEmpty()) {
+                            new PreferenceManager(appContext).addLearnedKeywords(keywords);
+                        }
+
                         // Refresh widget to show newly created task
-                        TaskWidgetProvider.refreshWidget(requireContext());
+                        TaskWidgetProvider.refreshWidget(appContext);
                         if (getActivity() != null) {
                             getActivity().runOnUiThread(this::loadTasks);
                         }

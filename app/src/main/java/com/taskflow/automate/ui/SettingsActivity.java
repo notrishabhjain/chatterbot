@@ -12,12 +12,14 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.SwitchCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
@@ -59,7 +61,9 @@ public class SettingsActivity extends AppCompatActivity {
         setupReminderIntervals();
         setupEmailDigest();
         setupWhatsAppSettings();
+        setupWhatsAppMonitor();
         setupTaskActionButton();
+        setupLearnedKeywords();
     }
 
     private void setupToolbar() {
@@ -122,20 +126,19 @@ public class SettingsActivity extends AppCompatActivity {
         PackageManager pm = getPackageManager();
         List<ApplicationInfo> allApps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
 
-        // Filter to user-installed apps + common messaging/productivity apps
+        // Filter to all user-visible apps (launcher intent), user-installed, or updated system apps
         List<ApplicationInfo> relevantApps = new ArrayList<>();
         for (ApplicationInfo appInfo : allApps) {
-            // Include if it's a user-installed app (not pure system)
-            // OR if it has a launcher intent (user-visible app)
-            boolean isUserApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0;
-            boolean hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null;
-
             // Skip our own app
             if ("com.taskflow.automate".equals(appInfo.packageName)) {
                 continue;
             }
 
-            if (isUserApp || hasLauncher) {
+            boolean isUserApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0;
+            boolean isUpdatedSystemApp = (appInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+            boolean hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null;
+
+            if (hasLauncher || isUserApp || isUpdatedSystemApp) {
                 relevantApps.add(appInfo);
             }
         }
@@ -296,6 +299,68 @@ public class SettingsActivity extends AppCompatActivity {
         toggleTaskAction.setChecked(preferenceManager.isTaskActionButtonEnabled());
         toggleTaskAction.setOnCheckedChangeListener((buttonView, isChecked) -> {
             preferenceManager.setTaskActionButtonEnabled(isChecked);
+        });
+    }
+
+    private void setupWhatsAppMonitor() {
+        SwitchCompat switchMonitor = findViewById(R.id.switch_whatsapp_monitor);
+        TextInputLayout layoutMonitoredChat = findViewById(R.id.layout_whatsapp_monitored_chat);
+        TextInputEditText inputMonitoredChat = findViewById(R.id.input_whatsapp_monitored_chat);
+
+        if (switchMonitor == null || layoutMonitoredChat == null || inputMonitoredChat == null) {
+            return;
+        }
+
+        boolean enabled = preferenceManager.isWhatsAppMonitorEnabled();
+        switchMonitor.setChecked(enabled);
+        layoutMonitoredChat.setVisibility(enabled ? View.VISIBLE : View.GONE);
+
+        String savedChat = preferenceManager.getWhatsAppMonitoredChat();
+        if (savedChat != null) {
+            inputMonitoredChat.setText(savedChat);
+        }
+
+        switchMonitor.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            preferenceManager.setWhatsAppMonitorEnabled(isChecked);
+            layoutMonitoredChat.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        inputMonitoredChat.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String name = s.toString().trim();
+                if (!name.isEmpty()) {
+                    preferenceManager.setWhatsAppMonitoredChat(name);
+                } else {
+                    preferenceManager.setWhatsAppMonitoredChat(null);
+                }
+            }
+        });
+    }
+
+    private void setupLearnedKeywords() {
+        TextView textCount = findViewById(R.id.text_learned_keywords_count);
+        MaterialButton btnClear = findViewById(R.id.btn_clear_learned_keywords);
+
+        if (textCount == null || btnClear == null) {
+            return;
+        }
+
+        int count = preferenceManager.getLearnedKeywordsCount();
+        textCount.setText(getString(R.string.learned_keywords_count, count));
+
+        btnClear.setOnClickListener(v -> {
+            preferenceManager.clearLearnedKeywords();
+            textCount.setText(getString(R.string.learned_keywords_count, 0));
+            Toast.makeText(this, R.string.learned_keywords_cleared, Toast.LENGTH_SHORT).show();
         });
     }
 }

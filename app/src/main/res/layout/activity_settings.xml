@@ -209,6 +209,67 @@
 
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- WhatsApp Chat Monitor Section -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="@color/textSecondary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/whatsapp_monitor_header"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/textPrimary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/whatsapp_monitor_description"
+                android:textSize="14sp"
+                android:textColor="@color/textSecondary" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="12dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/whatsapp_monitor_enable_label"
+                    android:textSize="16sp"
+                    android:textColor="@color/textPrimary" />
+
+                <androidx.appcompat.widget.SwitchCompat
+                    android:id="@+id/switch_whatsapp_monitor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_whatsapp_monitored_chat"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/whatsapp_monitored_chat_label">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/input_whatsapp_monitored_chat"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="textPersonName"
+                    android:hint="@string/whatsapp_monitored_chat_hint" />
+
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Task Action Button Toggle -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -231,6 +292,14 @@
                     android:layout_height="wrap_content" />
 
             </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/notification_approval_description"
+                android:textSize="13sp"
+                android:textColor="@color/textSecondary" />
 
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_email_digest_settings"
@@ -266,6 +335,46 @@
                 </LinearLayout>
 
             </com.google.android.material.card.MaterialCardView>
+
+            <!-- Divider -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginVertical="16dp"
+                android:background="@color/textSecondary" />
+
+            <!-- Learned Keywords Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/learned_keywords_header"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="@color/textPrimary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/learned_keywords_description"
+                android:textSize="14sp"
+                android:textColor="@color/textSecondary" />
+
+            <TextView
+                android:id="@+id/text_learned_keywords_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textSize="14sp"
+                android:textColor="@color/textPrimary" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_clear_learned_keywords"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:text="@string/clear_learned_keywords"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
         </LinearLayout>
     </ScrollView>

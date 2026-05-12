@@ -198,6 +198,14 @@ public class TaskExtractor {
             "(?i)\\bin\\s+(\\d+)\\s*minutes?\\b"
     );
 
+    private Set<String> additionalKeywords = new HashSet<>();
+
+    public void setAdditionalKeywords(Set<String> keywords) {
+        if (keywords != null) {
+            this.additionalKeywords = keywords;
+        }
+    }
+
     public TaskExtractionResult extractTask(String title, String text, String packageName) {
         TaskExtractionResult result = new TaskExtractionResult();
 
@@ -278,6 +286,12 @@ public class TaskExtractor {
 
     private boolean containsActionKeyword(String combinedText) {
         for (String keyword : ACTION_KEYWORDS) {
+            if (combinedText.contains(keyword)) {
+                return true;
+            }
+        }
+        // Check learned keywords
+        for (String keyword : additionalKeywords) {
             if (combinedText.contains(keyword)) {
                 return true;
             }

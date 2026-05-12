@@ -102,102 +102,117 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        executor.shutdown();
+        // Do NOT shut down executor here - pending Snackbar callbacks may still need it
+        // to persist task completions to the database. The executor will be GC'd naturally.
     }
 
     private void loadStats() {
-        executor.execute(() -> {
-            int pendingCount = AppDatabase.getInstance(requireContext())
-                    .taskDao().getTaskCountByStatus("pending");
-            int highPriorityCount = AppDatabase.getInstance(requireContext())
-                    .taskDao().getHighPriorityPendingCount();
+        final android.content.Context ctx = getContext();
+        if (ctx == null) return;
+        final android.content.Context appContext = ctx.getApplicationContext();
+        try {
+            executor.execute(() -> {
+                int pendingCount = AppDatabase.getInstance(appContext)
+                        .taskDao().getTaskCountByStatus("pending");
+                int highPriorityCount = AppDatabase.getInstance(appContext)
+                        .taskDao().getHighPriorityPendingCount();
 
-            Calendar cal = Calendar.getInstance();
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            cal.set(Calendar.MILLISECOND, 0);
-            long startOfDay = cal.getTimeInMillis();
-            cal.set(Calendar.HOUR_OF_DAY, 23);
-            cal.set(Calendar.MINUTE, 59);
-            cal.set(Calendar.SECOND, 59);
-            long endOfDay = cal.getTimeInMillis();
+                Calendar cal = Calendar.getInstance();
+                cal.set(Calendar.HOUR_OF_DAY, 0);
+                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.SECOND, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                long startOfDay = cal.getTimeInMillis();
+                cal.set(Calendar.HOUR_OF_DAY, 23);
+                cal.set(Calendar.MINUTE, 59);
+                cal.set(Calendar.SECOND, 59);
+                long endOfDay = cal.getTimeInMillis();
 
-            int dueTodayCount = AppDatabase.getInstance(requireContext())
-                    .taskDao().getDueTodayCount(startOfDay, endOfDay);
-            int overdueCount = AppDatabase.getInstance(requireContext())
-                    .taskDao().getOverdueCount(System.currentTimeMillis());
+                int dueTodayCount = AppDatabase.getInstance(appContext)
+                        .taskDao().getDueTodayCount(startOfDay, endOfDay);
+                int overdueCount = AppDatabase.getInstance(appContext)
+                        .taskDao().getOverdueCount(System.currentTimeMillis());
 
-            // Week stats
-            cal = Calendar.getInstance();
-            cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
-            cal.set(Calendar.HOUR_OF_DAY, 0);
-            cal.set(Calendar.MINUTE, 0);
-            cal.set(Calendar.SECOND, 0);
-            cal.set(Calendar.MILLISECOND, 0);
-            long weekStart = cal.getTimeInMillis();
-            long weekEnd = System.currentTimeMillis();
-            int completedThisWeek = AppDatabase.getInstance(requireContext())
-                    .taskDao().getCompletedThisWeekCount(weekStart, weekEnd);
+                // Week stats
+                cal = Calendar.getInstance();
+                cal.set(Calendar.DAY_OF_WEEK, cal.getFirstDayOfWeek());
+                cal.set(Calendar.HOUR_OF_DAY, 0);
+                cal.set(Calendar.MINUTE, 0);
+                cal.set(Calendar.SECOND, 0);
+                cal.set(Calendar.MILLISECOND, 0);
+                long weekStart = cal.getTimeInMillis();
+                long weekEnd = System.currentTimeMillis();
+                int completedThisWeek = AppDatabase.getInstance(appContext)
+                        .taskDao().getCompletedThisWeekCount(weekStart, weekEnd);
 
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    textStatPending.setText(String.valueOf(pendingCount));
-                    textStatHighPriority.setText(String.valueOf(highPriorityCount));
-                    textStatDueToday.setText(String.valueOf(dueTodayCount));
-                    textStatOverdue.setText(String.valueOf(overdueCount));
-                    textStatCompletedWeek.setText(getString(R.string.stat_completed_this_week, completedThisWeek));
-                });
-            }
-        });
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        textStatPending.setText(String.valueOf(pendingCount));
+                        textStatHighPriority.setText(String.valueOf(highPriorityCount));
+                        textStatDueToday.setText(String.valueOf(dueTodayCount));
+                        textStatOverdue.setText(String.valueOf(overdueCount));
+                        textStatCompletedWeek.setText(getString(R.string.stat_completed_this_week, completedThisWeek));
+                    });
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore load request
+        }
     }
 
     private void loadTasks() {
-        executor.execute(() -> {
-            Calendar calendar = Calendar.getInstance();
-            calendar.set(Calendar.HOUR_OF_DAY, 0);
-            calendar.set(Calendar.MINUTE, 0);
-            calendar.set(Calendar.SECOND, 0);
-            calendar.set(Calendar.MILLISECOND, 0);
-            long startOfDay = calendar.getTimeInMillis();
+        final android.content.Context ctx = getContext();
+        if (ctx == null) return;
+        final android.content.Context appContext = ctx.getApplicationContext();
+        try {
+            executor.execute(() -> {
+                Calendar calendar = Calendar.getInstance();
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+                calendar.set(Calendar.SECOND, 0);
+                calendar.set(Calendar.MILLISECOND, 0);
+                long startOfDay = calendar.getTimeInMillis();
 
-            calendar.set(Calendar.HOUR_OF_DAY, 23);
-            calendar.set(Calendar.MINUTE, 59);
-            calendar.set(Calendar.SECOND, 59);
-            calendar.set(Calendar.MILLISECOND, 999);
-            long endOfDay = calendar.getTimeInMillis();
+                calendar.set(Calendar.HOUR_OF_DAY, 23);
+                calendar.set(Calendar.MINUTE, 59);
+                calendar.set(Calendar.SECOND, 59);
+                calendar.set(Calendar.MILLISECOND, 999);
+                long endOfDay = calendar.getTimeInMillis();
 
-            long now = System.currentTimeMillis();
+                long now = System.currentTimeMillis();
 
-            List<Task> todayTasks = AppDatabase.getInstance(requireContext())
-                    .taskDao().getTasksDueToday(startOfDay, endOfDay);
-            List<Task> overdueTasks = AppDatabase.getInstance(requireContext())
-                    .taskDao().getOverdueTasks(now);
+                List<Task> todayTasks = AppDatabase.getInstance(appContext)
+                        .taskDao().getTasksDueToday(startOfDay, endOfDay);
+                List<Task> overdueTasks = AppDatabase.getInstance(appContext)
+                        .taskDao().getOverdueTasks(now);
 
-            List<Task> combinedTasks = new ArrayList<>();
-            combinedTasks.addAll(overdueTasks);
-            combinedTasks.addAll(todayTasks);
+                List<Task> combinedTasks = new ArrayList<>();
+                combinedTasks.addAll(overdueTasks);
+                combinedTasks.addAll(todayTasks);
 
-            // Pre-load subtask counts
-            Map<Long, int[]> countMap = new HashMap<>();
-            for (Task t : combinedTasks) {
-                int total = AppDatabase.getInstance(requireContext()).subtaskDao().getTotalSubtaskCount(t.getId());
-                if (total > 0) {
-                    int completed = AppDatabase.getInstance(requireContext()).subtaskDao().getCompletedSubtaskCount(t.getId());
-                    countMap.put(t.getId(), new int[]{completed, total});
+                // Pre-load subtask counts
+                Map<Long, int[]> countMap = new HashMap<>();
+                for (Task t : combinedTasks) {
+                    int total = AppDatabase.getInstance(appContext).subtaskDao().getTotalSubtaskCount(t.getId());
+                    if (total > 0) {
+                        int completed = AppDatabase.getInstance(appContext).subtaskDao().getCompletedSubtaskCount(t.getId());
+                        countMap.put(t.getId(), new int[]{completed, total});
+                    }
                 }
-            }
 
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    taskList.clear();
-                    taskList.addAll(combinedTasks);
-                    taskAdapter.setSubtaskCountMap(countMap);
-                    taskAdapter.updateTasks(taskList);
-                    updateEmptyState();
-                });
-            }
-        });
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        taskList.clear();
+                        taskList.addAll(combinedTasks);
+                        taskAdapter.setSubtaskCountMap(countMap);
+                        taskAdapter.updateTasks(taskList);
+                        updateEmptyState();
+                    });
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore load request
+        }
     }
 
     private void updateEmptyState() {
@@ -242,6 +257,8 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
         taskAdapter.removeTask(position);
         updateEmptyState();
 
+        final android.content.Context appContext = requireContext().getApplicationContext();
+
         Snackbar snackbar = Snackbar.make(requireView(), R.string.task_completed_message, 5000);
         snackbar.setAction(R.string.undo, v -> {
             taskAdapter.addTask(position, task);
@@ -251,19 +268,35 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
             @Override
             public void onDismissed(Snackbar transientBottomBar, int event) {
                 if (event != DISMISS_EVENT_ACTION) {
-                    executor.execute(() -> {
-                        AppDatabase.getInstance(requireContext())
-                                .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
-                        ReminderScheduler.cancelReminder(requireContext(), task.getId());
-                        BadgeUtils.updateBadgeCount(requireContext());
+                    try {
+                        executor.execute(() -> {
+                            AppDatabase.getInstance(appContext)
+                                    .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                            ReminderScheduler.cancelReminder(appContext, task.getId());
+                            BadgeUtils.updateBadgeCount(appContext);
 
-                        // Handle recurring tasks
-                        RecurringTaskManager recurringManager = new RecurringTaskManager();
-                        Task nextTask = recurringManager.createNextRecurrence(task);
-                        if (nextTask != null) {
-                            AppDatabase.getInstance(requireContext()).taskDao().insertTask(nextTask);
-                        }
-                    });
+                            // Handle recurring tasks
+                            RecurringTaskManager recurringManager = new RecurringTaskManager();
+                            Task nextTask = recurringManager.createNextRecurrence(task);
+                            if (nextTask != null) {
+                                AppDatabase.getInstance(appContext).taskDao().insertTask(nextTask);
+                            }
+                        });
+                    } catch (java.util.concurrent.RejectedExecutionException e) {
+                        // Executor was shut down - use a temporary executor to ensure DB write completes
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            AppDatabase.getInstance(appContext)
+                                    .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                            ReminderScheduler.cancelReminder(appContext, task.getId());
+                            BadgeUtils.updateBadgeCount(appContext);
+
+                            RecurringTaskManager recurringManager = new RecurringTaskManager();
+                            Task nextTask = recurringManager.createNextRecurrence(task);
+                            if (nextTask != null) {
+                                AppDatabase.getInstance(appContext).taskDao().insertTask(nextTask);
+                            }
+                        });
+                    }
                 }
             }
         });
@@ -324,27 +357,40 @@ public class TodayFragment extends Fragment implements TaskAdapter.OnTaskComplet
 
     private void applySnooze(Task task, int position, long snoozeTime) {
         task.setDueDate(snoozeTime);
-        executor.execute(() -> {
-            AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> {
-                    taskAdapter.notifyItemChanged(position);
-                    SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
-                    String msg = getString(R.string.snoozed_until, sdf.format(new Date(snoozeTime)));
-                    Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show();
-                });
-            }
-        });
+        final android.content.Context appContext = requireContext().getApplicationContext();
+        try {
+            executor.execute(() -> {
+                AppDatabase.getInstance(appContext).taskDao().updateTask(task);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> {
+                        taskAdapter.notifyItemChanged(position);
+                        SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
+                        String msg = getString(R.string.snoozed_until, sdf.format(new Date(snoozeTime)));
+                        android.content.Context ctx = getContext();
+                        if (ctx != null) {
+                            Toast.makeText(ctx, msg, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore
+        }
     }
 
     @Override
     public void onTaskStarToggle(Task task, int position) {
         task.setStarred(!task.isStarred());
-        executor.execute(() -> {
-            AppDatabase.getInstance(requireContext()).taskDao().updateTask(task);
-            if (getActivity() != null) {
-                getActivity().runOnUiThread(() -> loadTasks());
-            }
-        });
+        final android.content.Context appContext = requireContext().getApplicationContext();
+        try {
+            executor.execute(() -> {
+                AppDatabase.getInstance(appContext).taskDao().updateTask(task);
+                if (getActivity() != null) {
+                    getActivity().runOnUiThread(() -> loadTasks());
+                }
+            });
+        } catch (java.util.concurrent.RejectedExecutionException e) {
+            // Executor shut down, ignore
+        }
     }
 }

@@ -26,6 +26,9 @@ public class PreferenceManager {
     private static final String KEY_QUICK_ADD_ENABLED = "quick_add_enabled";
     private static final String KEY_WHATSAPP_SELF_NAME = "whatsapp_self_name";
     private static final String KEY_SHOW_TASK_ACTION_BUTTON = "show_task_action_button";
+    private static final String KEY_WHATSAPP_MONITOR_ENABLED = "whatsapp_monitor_enabled";
+    private static final String KEY_WHATSAPP_MONITORED_CHAT = "whatsapp_monitored_chat";
+    private static final String KEY_LEARNED_KEYWORDS = "learned_keywords";
 
     private static final int DEFAULT_HIGH_INTERVAL = 30;
     private static final int DEFAULT_MEDIUM_INTERVAL = 60;
@@ -173,5 +176,57 @@ public class PreferenceManager {
 
     public void setTaskActionButtonEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_SHOW_TASK_ACTION_BUTTON, enabled).apply();
+    }
+
+    // WhatsApp Chat Monitor
+    public boolean isWhatsAppMonitorEnabled() {
+        return prefs.getBoolean(KEY_WHATSAPP_MONITOR_ENABLED, false);
+    }
+
+    public void setWhatsAppMonitorEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_WHATSAPP_MONITOR_ENABLED, enabled).apply();
+    }
+
+    public String getWhatsAppMonitoredChat() {
+        return prefs.getString(KEY_WHATSAPP_MONITORED_CHAT, null);
+    }
+
+    public void setWhatsAppMonitoredChat(String chatName) {
+        prefs.edit().putString(KEY_WHATSAPP_MONITORED_CHAT, chatName).apply();
+    }
+
+    // Adaptive Keyword Learning
+    public Set<String> getLearnedKeywords() {
+        return new HashSet<>(prefs.getStringSet(KEY_LEARNED_KEYWORDS, new HashSet<>()));
+    }
+
+    private static final int MAX_LEARNED_KEYWORDS = 200;
+
+    public void addLearnedKeywords(Set<String> keywords) {
+        Set<String> existing = getLearnedKeywords();
+        existing.addAll(keywords);
+        // Cap at maximum size to prevent unbounded growth
+        if (existing.size() > MAX_LEARNED_KEYWORDS) {
+            // Keep only the most recent keywords (trim to max size)
+            Set<String> trimmed = new HashSet<>();
+            int count = 0;
+            for (String keyword : existing) {
+                trimmed.add(keyword);
+                count++;
+                if (count >= MAX_LEARNED_KEYWORDS) {
+                    break;
+                }
+            }
+            existing = trimmed;
+        }
+        prefs.edit().putStringSet(KEY_LEARNED_KEYWORDS, existing).apply();
+    }
+
+    public int getLearnedKeywordsCount() {
+        return prefs.getStringSet(KEY_LEARNED_KEYWORDS, new HashSet<>()).size();
+    }
+
+    public void clearLearnedKeywords() {
+        prefs.edit().remove(KEY_LEARNED_KEYWORDS).apply();
     }
 }

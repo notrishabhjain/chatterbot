@@ -92,6 +92,12 @@ public class NotificationCaptureService extends NotificationListenerService {
         duplicateDetector = new DuplicateTaskDetector();
         preferenceManager = new PreferenceManager(this);
         executorService = Executors.newSingleThreadExecutor();
+
+        // Load learned keywords from preferences
+        Set<String> learnedKeywords = preferenceManager.getLearnedKeywords();
+        if (!learnedKeywords.isEmpty()) {
+            taskExtractor.setAdditionalKeywords(learnedKeywords);
+        }
     }
 
     @Override
@@ -107,6 +113,10 @@ public class NotificationCaptureService extends NotificationListenerService {
         if (sbn == null) {
             return;
         }
+
+        // Hot-reload learned keywords on each notification
+        Set<String> learnedKeywords = preferenceManager.getLearnedKeywords();
+        taskExtractor.setAdditionalKeywords(learnedKeywords);
 
         String packageName = sbn.getPackageName();
 
@@ -211,11 +221,67 @@ public class NotificationCaptureService extends NotificationListenerService {
             return;
         }
 
+        // WhatsApp self-forward detection - check BEFORE the monitor gate so self-forwards
+        // are always processed regardless of the monitor setting.
+        // Uses whatsAppSender (not title) to avoid matching against group conversation title.
+        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(whatsAppSender)) {
+            TaskExtractor.TaskExtractionResult selfResult = taskExtractor.extractTask(title, text, packageName);
+            if (!selfResult.isActionable) {
+                selfResult.isActionable = true;
+                selfResult.taskTitle = title != null ? title : "WhatsApp Task";
+                selfResult.taskDescription = text != null ? text : "";
+            }
+            if (enhancedDescription != null && !enhancedDescription.isEmpty()) {
+                if (selfResult.taskDescription == null || enhancedDescription.length() > selfResult.taskDescription.length()) {
+                    selfResult.taskDescription = enhancedDescription;
+                }
+            }
+            String selfUrls = extractUrls(text);
+            if (selfUrls != null && !selfUrls.isEmpty()) {
+                String desc = selfResult.taskDescription != null ? selfResult.taskDescription : "";
+                selfResult.taskDescription = desc + "\n" + selfUrls;
+            }
+            createSelfForwardTask(selfResult, packageName, sbn.getKey(), text);
+            return;
+        }
+
+        // WhatsApp Chat Monitor: filter notifications to only process the monitored chat
+        boolean forceCreateTask = false;
+        if (isWhatsAppPackage(packageName) && preferenceManager.isWhatsAppMonitorEnabled()) {
+            String monitoredChat = preferenceManager.getWhatsAppMonitoredChat();
+            if (monitoredChat != null && !monitoredChat.isEmpty()) {
+                boolean isFromMonitoredChat = false;
+                if (title != null && title.equalsIgnoreCase(monitoredChat)) {
+                    isFromMonitoredChat = true;
+                }
+                CharSequence convTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
+                if (convTitle != null && convTitle.toString().equalsIgnoreCase(monitoredChat)) {
+                    isFromMonitoredChat = true;
+                }
+                if (!isFromMonitoredChat) {
+                    return;
+                }
+                // From monitored chat - force task creation (bypass keyword check)
+                forceCreateTask = true;
+            }
+        }
+
         // Extract task information
         TaskExtractor.TaskExtractionResult result = taskExtractor.extractTask(title, text, packageName);
 
-        if (!result.isActionable) {
+        if (!result.isActionable && !forceCreateTask) {
             return;
+        }
+
+        // If forced by WhatsApp monitor, ensure task fields are populated
+        if (forceCreateTask && !result.isActionable) {
+            result.isActionable = true;
+            if (result.taskTitle == null || result.taskTitle.isEmpty()) {
+                result.taskTitle = title != null ? title : "WhatsApp Task";
+            }
+            if (result.taskDescription == null || result.taskDescription.isEmpty()) {
+                result.taskDescription = text != null ? text : "";
+            }
         }
 
         // Apply enhanced description if richer than original
@@ -230,13 +296,6 @@ public class NotificationCaptureService extends NotificationListenerService {
         if (urls != null && !urls.isEmpty()) {
             String desc = result.taskDescription != null ? result.taskDescription : "";
             result.taskDescription = desc + "\n" + urls;
-        }
-
-        // WhatsApp self-forward detection - use whatsAppSender (not title) to avoid
-        // matching against the group conversation title
-        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(whatsAppSender)) {
-            createSelfForwardTask(result, packageName, sbn.getKey(), text);
-            return;
         }
 
         // Post companion notification with "Create Task" action button
