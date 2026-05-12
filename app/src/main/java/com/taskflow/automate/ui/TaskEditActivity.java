@@ -80,6 +80,13 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
         setupTagAdd();
 
         long taskId = getIntent().getLongExtra(EXTRA_TASK_ID, -1);
+
+        // If recreated from saved state but taskId is invalid, finish gracefully
+        if (taskId == -1 && savedInstanceState != null) {
+            finish();
+            return;
+        }
+
         if (taskId != -1) {
             loadTask(taskId);
         } else {
@@ -193,31 +200,62 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     }
 
     private void loadTask(long taskId) {
-        executor.execute(() -> {
-            currentTask = AppDatabase.getInstance(this).taskDao().getTaskById(taskId);
-            if (currentTask != null) {
-                runOnUiThread(() -> populateFields());
-                loadTagsForTask(taskId);
-                loadSubtasks(taskId);
-            } else {
-                runOnUiThread(() -> {
-                    Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
-                    finish();
-                });
-            }
-        });
+        try {
+            executor.execute(() -> {
+                try {
+                    currentTask = AppDatabase.getInstance(this).taskDao().getTaskById(taskId);
+                    if (currentTask != null) {
+                        runOnUiThread(() -> {
+                            if (!isFinishing()) {
+                                populateFields();
+                            }
+                        });
+                        loadTagsForTask(taskId);
+                        loadSubtasks(taskId);
+                    } else {
+                        runOnUiThread(() -> {
+                            if (!isFinishing()) {
+                                Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
+                                finish();
+                            }
+                        });
+                    }
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    });
+                }
+            });
+        } catch (Exception e) {
+            // Executor may be shut down
+            Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     private void loadTagsForTask(long taskId) {
-        executor.execute(() -> {
-            List<Tag> tags = AppDatabase.getInstance(this).tagDao().getTagsForTask(taskId);
-            runOnUiThread(() -> {
-                chipGroupTags.removeAllViews();
-                for (Tag tag : tags) {
-                    addTagChip(tag);
+        try {
+            executor.execute(() -> {
+                try {
+                    List<Tag> tags = AppDatabase.getInstance(this).tagDao().getTagsForTask(taskId);
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            chipGroupTags.removeAllViews();
+                            for (Tag tag : tags) {
+                                addTagChip(tag);
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    // Prevent crash from DB or UI thread issues
                 }
             });
-        });
+        } catch (Exception e) {
+            // Executor may be shut down
+        }
     }
 
     private void addTagChip(Tag tag) {
@@ -237,27 +275,46 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
         }
         chip.setOnCloseIconClickListener(v -> {
             chipGroupTags.removeView(chip);
-            executor.execute(() -> {
-                TaskTagCrossRef crossRef = new TaskTagCrossRef();
-                crossRef.setTaskId(currentTask.getId());
-                crossRef.setTagId(tag.getId());
-                AppDatabase.getInstance(this).tagDao().deleteTaskTagCrossRef(crossRef);
-            });
+            if (currentTask == null) return;
+            try {
+                executor.execute(() -> {
+                    try {
+                        TaskTagCrossRef crossRef = new TaskTagCrossRef();
+                        crossRef.setTaskId(currentTask.getId());
+                        crossRef.setTagId(tag.getId());
+                        AppDatabase.getInstance(this).tagDao().deleteTaskTagCrossRef(crossRef);
+                    } catch (Exception e) {
+                        // Prevent crash from executor shutdown or DB error
+                    }
+                });
+            } catch (Exception e) {
+                // Executor may be shut down
+            }
         });
         chipGroupTags.addView(chip);
     }
 
     private void showAddTagDialog() {
-        executor.execute(() -> {
-            List<Tag> allTags = AppDatabase.getInstance(this).tagDao().getAllTags();
-            runOnUiThread(() -> {
-                if (allTags.isEmpty()) {
-                    showCreateTagDialog();
-                } else {
-                    showSelectTagDialog(allTags);
+        try {
+            executor.execute(() -> {
+                try {
+                    List<Tag> allTags = AppDatabase.getInstance(this).tagDao().getAllTags();
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            if (allTags.isEmpty()) {
+                                showCreateTagDialog();
+                            } else {
+                                showSelectTagDialog(allTags);
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    // Prevent crash from DB or UI thread issues
                 }
             });
-        });
+        } catch (Exception e) {
+            // Executor may be shut down
+        }
     }
 
     private void showSelectTagDialog(List<Tag> allTags) {
@@ -282,13 +339,26 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     }
 
     private void assignTagToTask(Tag tag) {
-        executor.execute(() -> {
-            TaskTagCrossRef crossRef = new TaskTagCrossRef();
-            crossRef.setTaskId(currentTask.getId());
-            crossRef.setTagId(tag.getId());
-            AppDatabase.getInstance(this).tagDao().insertTaskTagCrossRef(crossRef);
-            runOnUiThread(() -> addTagChip(tag));
-        });
+        if (currentTask == null) return;
+        try {
+            executor.execute(() -> {
+                try {
+                    TaskTagCrossRef crossRef = new TaskTagCrossRef();
+                    crossRef.setTaskId(currentTask.getId());
+                    crossRef.setTagId(tag.getId());
+                    AppDatabase.getInstance(this).tagDao().insertTaskTagCrossRef(crossRef);
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            addTagChip(tag);
+                        }
+                    });
+                } catch (Exception e) {
+                    // Prevent crash from DB or UI thread issues
+                }
+            });
+        } catch (Exception e) {
+            // Executor may be shut down
+        }
     }
 
     private void showCreateTagDialog() {
@@ -330,13 +400,21 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
                         Tag newTag = new Tag();
                         newTag.setName(name);
                         newTag.setColor(selectedColor[0]);
-                        executor.execute(() -> {
-                            long tagId = AppDatabase.getInstance(this).tagDao().insertTag(newTag);
-                            newTag.setId(tagId);
-                            if (currentTask != null) {
-                                assignTagToTask(newTag);
-                            }
-                        });
+                        try {
+                            executor.execute(() -> {
+                                try {
+                                    long tagId = AppDatabase.getInstance(this).tagDao().insertTag(newTag);
+                                    newTag.setId(tagId);
+                                    if (currentTask != null) {
+                                        assignTagToTask(newTag);
+                                    }
+                                } catch (Exception e) {
+                                    // Prevent crash from DB error
+                                }
+                            });
+                        } catch (Exception e) {
+                            // Executor may be shut down
+                        }
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -344,12 +422,14 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     }
 
     private void populateFields() {
+        if (currentTask == null) return;
         try {
             editTitle.setText(currentTask.getTitle() != null ? currentTask.getTitle() : "");
             editDescription.setText(currentTask.getDescription() != null ? currentTask.getDescription() : "");
 
             // Clamp priority to valid spinner range [0, 2]
-            spinnerPriority.setSelection(Math.max(0, Math.min(2, currentTask.getPriority() - 1)));
+            int priorityIndex = currentTask.getPriority() - 1;
+            spinnerPriority.setSelection(Math.max(0, Math.min(2, priorityIndex)));
 
             if (currentTask.getDueDate() != null) {
                 selectedDueDate = currentTask.getDueDate();
@@ -374,17 +454,29 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
     }
 
     private void loadSubtasks(long taskId) {
-        executor.execute(() -> {
-            List<Subtask> subtasks = AppDatabase.getInstance(this).subtaskDao().getSubtasksForTask(taskId);
-            runOnUiThread(() -> {
-                subtaskList.clear();
-                subtaskList.addAll(subtasks);
-                subtaskAdapter.updateSubtasks(subtaskList);
+        try {
+            executor.execute(() -> {
+                try {
+                    List<Subtask> subtasks = AppDatabase.getInstance(this).subtaskDao().getSubtasksForTask(taskId);
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            subtaskList.clear();
+                            subtaskList.addAll(subtasks);
+                            subtaskAdapter.updateSubtasks(subtaskList);
+                        }
+                    });
+                } catch (Exception e) {
+                    // Prevent crash from DB or UI thread issues
+                }
             });
-        });
+        } catch (Exception e) {
+            // Executor may be shut down
+        }
     }
 
     private void showAddSubtaskDialog() {
+        if (currentTask == null) return;
+
         EditText editText = new EditText(this);
         editText.setHint(R.string.enter_subtask_title);
         editText.setSingleLine(true);
@@ -400,14 +492,24 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
                         subtask.setTitle(title);
                         subtask.setCompleted(false);
                         subtask.setCreatedAt(System.currentTimeMillis());
-                        executor.execute(() -> {
-                            long id = AppDatabase.getInstance(this).subtaskDao().insertSubtask(subtask);
-                            subtask.setId(id);
-                            runOnUiThread(() -> {
-                                subtaskList.add(subtask);
-                                subtaskAdapter.notifyItemInserted(subtaskList.size() - 1);
+                        try {
+                            executor.execute(() -> {
+                                try {
+                                    long id = AppDatabase.getInstance(this).subtaskDao().insertSubtask(subtask);
+                                    subtask.setId(id);
+                                    runOnUiThread(() -> {
+                                        if (!isFinishing()) {
+                                            subtaskList.add(subtask);
+                                            subtaskAdapter.notifyItemInserted(subtaskList.size() - 1);
+                                        }
+                                    });
+                                } catch (Exception e) {
+                                    // Prevent crash from DB or UI thread issues
+                                }
                             });
-                        });
+                        } catch (Exception e) {
+                            // Executor may be shut down
+                        }
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
@@ -416,8 +518,19 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
 
     @Override
     public void onSubtaskToggle(Subtask subtask, boolean isChecked) {
+        if (currentTask == null || subtask == null) return;
         subtask.setCompleted(isChecked);
-        executor.execute(() -> AppDatabase.getInstance(this).subtaskDao().updateSubtask(subtask));
+        try {
+            executor.execute(() -> {
+                try {
+                    AppDatabase.getInstance(this).subtaskDao().updateSubtask(subtask);
+                } catch (Exception e) {
+                    // Prevent crash from DB error
+                }
+            });
+        } catch (Exception e) {
+            // Executor may be shut down
+        }
         // Refresh to update strikethrough
         int index = subtaskList.indexOf(subtask);
         if (index >= 0) {
@@ -427,7 +540,18 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
 
     @Override
     public void onSubtaskDelete(Subtask subtask, int position) {
-        executor.execute(() -> AppDatabase.getInstance(this).subtaskDao().deleteSubtask(subtask));
+        if (currentTask == null || subtask == null) return;
+        try {
+            executor.execute(() -> {
+                try {
+                    AppDatabase.getInstance(this).subtaskDao().deleteSubtask(subtask);
+                } catch (Exception e) {
+                    // Prevent crash from DB error
+                }
+            });
+        } catch (Exception e) {
+            // Executor may be shut down
+        }
         subtaskAdapter.removeItem(position);
     }
 
@@ -459,12 +583,27 @@ public class TaskEditActivity extends AppCompatActivity implements SubtaskAdapte
             currentTask.setRecurrenceInterval(0);
         }
 
-        executor.execute(() -> {
-            AppDatabase.getInstance(this).taskDao().updateTask(currentTask);
-            runOnUiThread(() -> {
-                setResult(RESULT_OK);
-                finish();
+        try {
+            executor.execute(() -> {
+                try {
+                    AppDatabase.getInstance(this).taskDao().updateTask(currentTask);
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            setResult(RESULT_OK);
+                            finish();
+                        }
+                    });
+                } catch (Exception e) {
+                    runOnUiThread(() -> {
+                        if (!isFinishing()) {
+                            Toast.makeText(this, R.string.task_not_found, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                }
             });
-        });
+        } catch (Exception e) {
+            // Executor may be shut down
+            finish();
+        }
     }
 }

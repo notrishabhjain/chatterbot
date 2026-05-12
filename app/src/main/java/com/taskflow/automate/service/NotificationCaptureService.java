@@ -18,6 +18,8 @@ import com.taskflow.automate.util.SmartTaskCategorizer;
 import com.taskflow.automate.util.TaskExtractor;
 import com.taskflow.automate.widget.TaskWidgetProvider;
 
+import android.os.Parcelable;
+
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
@@ -119,6 +121,58 @@ public class NotificationCaptureService extends NotificationListenerService {
         Bundle extras = notification.extras;
         String title = extras.getString(Notification.EXTRA_TITLE);
         String text = extras.getString(Notification.EXTRA_TEXT);
+
+        // WhatsApp-specific: extract content from MessagingStyle EXTRA_MESSAGES
+        if (isWhatsAppPackage(packageName)) {
+            Parcelable[] messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES);
+            if (messages != null && messages.length > 0) {
+                // Extract the last message's text and sender
+                Parcelable lastMsg = messages[messages.length - 1];
+                if (lastMsg instanceof Bundle) {
+                    Bundle msgBundle = (Bundle) lastMsg;
+                    CharSequence msgText = msgBundle.getCharSequence("text");
+                    CharSequence msgSender = msgBundle.getCharSequence("sender");
+                    if (msgText != null && msgText.length() > 0) {
+                        text = msgText.toString();
+                    }
+                    if (msgSender != null && msgSender.length() > 0) {
+                        title = msgSender.toString();
+                    }
+                }
+            }
+
+            // Check for EXTRA_CONVERSATION_TITLE (group chat name)
+            CharSequence conversationTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
+            if (conversationTitle != null && conversationTitle.length() > 0) {
+                title = conversationTitle.toString();
+            }
+
+            // Handle summary notifications with EXTRA_TEXT_LINES
+            CharSequence[] textLines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+            if (textLines != null && textLines.length > 0 && (text == null || text.isEmpty()
+                    || text.matches("\\d+\\s*(new\\s*)?messages?.*"))) {
+                StringBuilder combined = new StringBuilder();
+                for (CharSequence line : textLines) {
+                    if (line != null && line.length() > 0) {
+                        if (combined.length() > 0) {
+                            combined.append("\n");
+                        }
+                        combined.append(line);
+                    }
+                }
+                if (combined.length() > 0) {
+                    text = combined.toString();
+                }
+            }
+        }
+
+        // Prefer EXTRA_BIG_TEXT over EXTRA_TEXT when available and longer
+        CharSequence bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT);
+        if (bigText != null && bigText.length() > 0) {
+            if (text == null || bigText.length() > text.length()) {
+                text = bigText.toString();
+            }
+        }
 
         // For messaging apps: use title as sender/assignee
         String senderName = null;
@@ -370,5 +424,9 @@ public class NotificationCaptureService extends NotificationListenerService {
                 deduplicationMap.remove(entry.getKey());
             }
         }
+    }
+
+    private boolean isWhatsAppPackage(String packageName) {
+        return "com.whatsapp".equals(packageName) || "com.whatsapp.w4b".equals(packageName);
     }
 }
