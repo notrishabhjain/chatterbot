@@ -3,6 +3,7 @@ package com.taskflow.automate.widget;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.view.View;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
@@ -10,13 +11,17 @@ import com.taskflow.automate.R;
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.model.Task;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 public class TaskWidgetRemoteViewsFactory implements RemoteViewsService.RemoteViewsFactory {
 
     private final Context context;
     private List<Task> tasks = new ArrayList<>();
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault());
 
     public TaskWidgetRemoteViewsFactory(Context context) {
         this.context = context;
@@ -58,6 +63,14 @@ public class TaskWidgetRemoteViewsFactory implements RemoteViewsService.RemoteVi
 
         views.setTextViewText(R.id.widget_task_title, task.getTitle());
 
+        // Show due date if available
+        if (task.getDueDate() != null) {
+            views.setTextViewText(R.id.widget_task_due_date, dateFormat.format(new Date(task.getDueDate())));
+            views.setViewVisibility(R.id.widget_task_due_date, View.VISIBLE);
+        } else {
+            views.setViewVisibility(R.id.widget_task_due_date, View.GONE);
+        }
+
         // Set priority color
         int priorityColor;
         switch (task.getPriority()) {
@@ -80,10 +93,11 @@ public class TaskWidgetRemoteViewsFactory implements RemoteViewsService.RemoteVi
         completeIntent.putExtra(TaskWidgetProvider.EXTRA_TASK_ID, task.getId());
         views.setOnClickFillInIntent(R.id.widget_btn_complete, completeIntent);
 
-        // Set fill-in intent on the task title to open task detail
+        // Set fill-in intent on the root layout and task title to open task detail
         Intent viewIntent = new Intent();
         viewIntent.setAction(TaskWidgetProvider.ACTION_VIEW_TASK);
         viewIntent.putExtra(TaskWidgetProvider.EXTRA_TASK_ID, task.getId());
+        views.setOnClickFillInIntent(R.id.widget_task_item_root, viewIntent);
         views.setOnClickFillInIntent(R.id.widget_task_title, viewIntent);
 
         return views;

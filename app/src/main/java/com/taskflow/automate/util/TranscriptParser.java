@@ -9,11 +9,17 @@ public class TranscriptParser {
 
     private final MeetingTaskExtractor extractor;
     private final IntelligentTranscriptAnalyzer intelligentAnalyzer;
+    private final TranscriptTranslator translator;
+    private final ContextAwareTaskExtractor contextExtractor;
     private List<String> teamMembers;
+    private String lastTranslatedText = null;
+    private boolean lastContainedNonEnglish = false;
 
     public TranscriptParser() {
         extractor = new MeetingTaskExtractor();
         intelligentAnalyzer = new IntelligentTranscriptAnalyzer();
+        translator = new TranscriptTranslator();
+        contextExtractor = new ContextAwareTaskExtractor();
     }
 
     public void setTeamMembers(List<String> memberNames) {
@@ -23,62 +29,63 @@ public class TranscriptParser {
     }
 
     /**
+     * Returns the last translated text after parseTranscript() is called.
+     * If the original text contained Hindi/Hinglish, this will be the English translation.
+     */
+    public String getLastTranslatedText() {
+        return lastTranslatedText;
+    }
+
+    /**
+     * Returns true if the translator detected non-English content in the last parsed transcript.
+     */
+    public boolean lastTranscriptContainedNonEnglish() {
+        return lastContainedNonEnglish;
+    }
+
+    /**
      * Parses a full transcript text into a list of extracted action items.
-     * Splits by newlines and sentence boundaries, detects speaker labels,
-     * deduplicates by title, and returns sorted by confidence descending.
+     * New workflow: (1) Translate Hindi/Hinglish to English, (2) Extract tasks using
+     * context-aware full-transcript analysis, (3) Fallback with IntelligentTranscriptAnalyzer,
+     * (4) Merge and deduplicate results sorted by confidence descending.
      */
     public List<MeetingTaskExtractor.ExtractedActionItem> parseTranscript(String transcript) {
         if (transcript == null || transcript.trim().isEmpty()) {
             return new ArrayList<>();
         }
 
+        // FIRST: Detect non-English content and translate to English
+        lastContainedNonEnglish = translator.containsNonEnglish(transcript);
+        lastTranslatedText = translator.translateToEnglish(transcript);
+
         List<MeetingTaskExtractor.ExtractedActionItem> results = new ArrayList<>();
 
-        // Split by newlines first
-        String[] lines = transcript.split("\\r?\\n");
+        // SECOND: Context-aware extraction on the translated text
+        List<ContextAwareTaskExtractor.ExtractedTask> contextTasks =
+                contextExtractor.extractTasks(lastTranslatedText, this.teamMembers);
 
-        for (String line : lines) {
-            if (line.trim().isEmpty()) {
-                continue;
-            }
-
-            // Detect speaker label patterns: "Name:" or "[Name]"
-            String speakerName = detectSpeaker(line);
-            String content = removeSpeakerLabel(line);
-
-            // Split by sentence boundaries if the line has multiple sentences
-            String[] sentences = content.split("(?<=[.?!])\\s+");
-
-            for (String sentence : sentences) {
-                if (sentence.trim().isEmpty()) {
-                    continue;
-                }
-
-                MeetingTaskExtractor.ExtractedActionItem item = extractor.extractFromLine(sentence.trim());
-                if (item != null) {
-                    // If speaker detected and no assignee found yet, use speaker as context
-                    if (item.assigneeName == null && speakerName != null) {
-                        item.assigneeName = speakerName;
-                    }
-                    results.add(item);
-                }
-            }
+        // THIRD: Convert ExtractedTask objects to ExtractedActionItem for compatibility
+        for (ContextAwareTaskExtractor.ExtractedTask ctxTask : contextTasks) {
+            MeetingTaskExtractor.ExtractedActionItem item = new MeetingTaskExtractor.ExtractedActionItem();
+            item.title = ctxTask.title;
+            item.assigneeName = ctxTask.assignee;
+            item.dueDate = ctxTask.dueDate;
+            item.confidence = ctxTask.confidence;
+            item.rawText = ctxTask.rawContext != null ? ctxTask.rawContext : "";
+            item.detectedLanguage = MeetingTaskExtractor.Language.ENGLISH;
+            results.add(item);
         }
 
-        // Deduplicate by title similarity
-        results = deduplicateItems(results);
-
-        // Second pass: Use IntelligentTranscriptAnalyzer for additional detection
+        // FOURTH: Fallback/supplementary pass with IntelligentTranscriptAnalyzer on translated text
         List<MeetingTaskExtractor.ExtractedActionItem> intelligentResults =
-                intelligentAnalyzer.analyze(transcript, this.teamMembers);
+                intelligentAnalyzer.analyze(lastTranslatedText, this.teamMembers);
 
-        // Merge results: add items from intelligent analysis not found by first pass
+        // FIFTH: Merge results, deduplicating by title similarity (keep higher confidence)
         for (MeetingTaskExtractor.ExtractedActionItem intelligentItem : intelligentResults) {
             boolean isDuplicate = false;
             for (int i = 0; i < results.size(); i++) {
                 MeetingTaskExtractor.ExtractedActionItem existing = results.get(i);
                 if (isSimilarTitle(intelligentItem.title, existing.title)) {
-                    // Keep the one with higher confidence
                     if (intelligentItem.confidence > existing.confidence) {
                         results.set(i, intelligentItem);
                     }

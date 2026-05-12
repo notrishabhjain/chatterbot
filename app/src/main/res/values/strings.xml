@@ -107,6 +107,8 @@
     <string name="tasks_created">%d task(s) created</string>
     <string name="error_reading_file">Error reading file</string>
     <string name="enter_transcript_first">Please enter or paste a transcript first</string>
+    <string name="translated_transcript_header">Translated Transcript</string>
+    <string name="translation_note">Hindi/Hinglish content was translated to English for task extraction:</string>
 
     <!-- Calendar -->
     <string name="add_to_calendar">Add to Calendar</string>
@@ -183,7 +185,7 @@
     <!-- Subtasks -->
     <string name="subtasks_header">Subtasks</string>
     <string name="add_subtask">+ Add Subtask</string>
-    <string name="subtask_progress">%d/%d done</string>
+    <string name="subtask_progress">%1$d/%2$d done</string>
     <string name="enter_subtask_title">Enter subtask title</string>
 
     <!-- Quick Add -->
@@ -195,5 +197,13 @@
 
     <!-- Weekly Summary -->
     <string name="weekly_summary_title">Weekly Task Summary</string>
-    <string name="weekly_summary_body">You have %d pending tasks, %d overdue, %d completed this week</string>
+    <string name="weekly_summary_body">You have %1$d pending tasks, %2$d overdue, %3$d completed this week</string>
+
+    <!-- Bulk Actions -->
+    <string name="bulk_complete_all">Complete All</string>
+    <string name="bulk_delete_all">Delete All</string>
+    <string name="bulk_change_priority">Change Priority</string>
+    <string name="bulk_selected_count">%d selected</string>
+    <string name="bulk_delete_confirm">Delete %d selected tasks?</string>
+    <string name="bulk_complete_confirm">%d tasks completed</string>
 </resources>

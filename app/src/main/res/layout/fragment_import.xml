@@ -65,6 +65,42 @@
             android:text="@string/btn_create_tasks"
             android:visibility="gone" />
 
+        <!-- Translated Transcript Section (shown when Hindi/Hinglish detected) -->
+        <LinearLayout
+            android:id="@+id/layout_translated_section"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginTop="16dp"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_toggle_translation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/translated_transcript_header"
+                style="@style/Widget.Material3.Button.TextButton" />
+
+            <TextView
+                android:id="@+id/text_translation_note"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/translation_note"
+                android:textSize="12sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/text_translated_transcript"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:textSize="14sp"
+                android:visibility="gone" />
+
+        </LinearLayout>
+
     </LinearLayout>
 
 </ScrollView>

@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -38,6 +39,7 @@ import com.taskflow.automate.ui.TaskEditActivity;
 import com.taskflow.automate.util.BadgeUtils;
 import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
+import com.taskflow.automate.widget.TaskWidgetProvider;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -52,7 +54,7 @@ import java.util.concurrent.Executors;
 
 public class TasksFragment extends Fragment implements TaskAdapter.OnTaskCompleteListener,
         TaskAdapter.OnTaskClickListener, SwipeCallback.SwipeActionListener,
-        TaskAdapter.OnTaskStarListener {
+        TaskAdapter.OnTaskStarListener, TaskAdapter.OnTaskLongClickListener {
 
     private RecyclerView recyclerTasks;
     private TextView textEmptyTasks;
@@ -64,6 +66,11 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
     private int selectedPriorityFilter = 0; // 0 = All
     private String currentSearchQuery = "";
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    // Bulk selection mode
+    private boolean isSelectionMode = false;
+    private LinearLayout bulkActionBar;
+    private TextView textSelectedCount;
 
     public TasksFragment() {
         // Required empty public constructor
@@ -87,6 +94,7 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         taskAdapter = new TaskAdapter(taskList, this);
         taskAdapter.setOnTaskClickListener(this);
         taskAdapter.setOnTaskStarListener(this);
+        taskAdapter.setOnTaskLongClickListener(this);
         recyclerTasks.setLayoutManager(new LinearLayoutManager(requireContext()));
         recyclerTasks.setAdapter(taskAdapter);
 
@@ -95,9 +103,16 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
         ItemTouchHelper itemTouchHelper = new ItemTouchHelper(swipeCallback);
         itemTouchHelper.attachToRecyclerView(recyclerTasks);
 
-        fabAddTask.setOnClickListener(v -> showAddTaskDialog());
+        fabAddTask.setOnClickListener(v -> {
+            if (isSelectionMode) {
+                exitSelectionMode();
+            } else {
+                showAddTaskDialog();
+            }
+        });
 
         setupSearchAndFilter(view);
+        setupBulkActionBar(view);
     }
 
     @Override
@@ -170,6 +185,246 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
             public void afterTextChanged(Editable s) {
             }
         });
+    }
+
+    private void setupBulkActionBar(View view) {
+        // Find the inner LinearLayout container within the CoordinatorLayout
+        ViewGroup coordinatorLayout = (ViewGroup) view;
+        LinearLayout innerLayout = null;
+        for (int i = 0; i < coordinatorLayout.getChildCount(); i++) {
+            View child = coordinatorLayout.getChildAt(i);
+            if (child instanceof LinearLayout) {
+                innerLayout = (LinearLayout) child;
+                break;
+            }
+        }
+        if (innerLayout == null) {
+            return;
+        }
+
+        bulkActionBar = new LinearLayout(requireContext());
+        bulkActionBar.setOrientation(LinearLayout.VERTICAL);
+        bulkActionBar.setBackgroundColor(0xFFF5F5F5);
+        bulkActionBar.setPadding(16, 12, 16, 12);
+        bulkActionBar.setVisibility(View.GONE);
+        bulkActionBar.setElevation(8f);
+
+        // Selected count text
+        textSelectedCount = new TextView(requireContext());
+        textSelectedCount.setTextSize(14);
+        textSelectedCount.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams countParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        countParams.setMargins(0, 0, 0, 8);
+        textSelectedCount.setLayoutParams(countParams);
+        bulkActionBar.addView(textSelectedCount);
+
+        // Button row
+        LinearLayout buttonRow = new LinearLayout(requireContext());
+        buttonRow.setOrientation(LinearLayout.HORIZONTAL);
+        buttonRow.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams rowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonRow.setLayoutParams(rowParams);
+
+        // Complete All button
+        MaterialButton btnCompleteAll = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnCompleteAll.setText(R.string.bulk_complete_all);
+        btnCompleteAll.setTextSize(12);
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnParams.setMargins(4, 0, 4, 0);
+        btnCompleteAll.setLayoutParams(btnParams);
+        btnCompleteAll.setOnClickListener(v -> bulkCompleteSelected());
+        buttonRow.addView(btnCompleteAll);
+
+        // Delete All button
+        MaterialButton btnDeleteAll = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnDeleteAll.setText(R.string.bulk_delete_all);
+        btnDeleteAll.setTextSize(12);
+        LinearLayout.LayoutParams btnDeleteParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnDeleteParams.setMargins(4, 0, 4, 0);
+        btnDeleteAll.setLayoutParams(btnDeleteParams);
+        btnDeleteAll.setOnClickListener(v -> bulkDeleteSelected());
+        buttonRow.addView(btnDeleteAll);
+
+        // Change Priority button
+        MaterialButton btnChangePriority = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnChangePriority.setText(R.string.bulk_change_priority);
+        btnChangePriority.setTextSize(12);
+        LinearLayout.LayoutParams btnPriorityParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        btnPriorityParams.setMargins(4, 0, 4, 0);
+        btnChangePriority.setLayoutParams(btnPriorityParams);
+        btnChangePriority.setOnClickListener(v -> bulkChangePriority());
+        buttonRow.addView(btnChangePriority);
+
+        bulkActionBar.addView(buttonRow);
+
+        // Select All / Deselect All row
+        LinearLayout selectRow = new LinearLayout(requireContext());
+        selectRow.setOrientation(LinearLayout.HORIZONTAL);
+        selectRow.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams selectRowParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        selectRowParams.setMargins(0, 8, 0, 0);
+        selectRow.setLayoutParams(selectRowParams);
+
+        MaterialButton btnSelectAll = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnSelectAll.setText("Select All");
+        btnSelectAll.setTextSize(12);
+        btnSelectAll.setOnClickListener(v -> {
+            taskAdapter.selectAll();
+            updateSelectedCount();
+        });
+        selectRow.addView(btnSelectAll);
+
+        MaterialButton btnDeselectAll = new MaterialButton(requireContext(), null,
+                com.google.android.material.R.attr.materialButtonOutlinedStyle);
+        btnDeselectAll.setText("Deselect All");
+        btnDeselectAll.setTextSize(12);
+        btnDeselectAll.setOnClickListener(v -> {
+            taskAdapter.deselectAll();
+            updateSelectedCount();
+        });
+        selectRow.addView(btnDeselectAll);
+
+        bulkActionBar.addView(selectRow);
+
+        // Add the bar at the end of the inner LinearLayout
+        LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+        innerLayout.addView(bulkActionBar, barParams);
+    }
+
+    private void enterSelectionMode(Task initialTask) {
+        isSelectionMode = true;
+        taskAdapter.setSelectionMode(true);
+        taskAdapter.getSelectedIds().add(initialTask.getId());
+        taskAdapter.notifyDataSetChanged();
+        bulkActionBar.setVisibility(View.VISIBLE);
+        fabAddTask.setImageResource(android.R.drawable.ic_menu_close_clear_cancel);
+        updateSelectedCount();
+    }
+
+    private void exitSelectionMode() {
+        isSelectionMode = false;
+        taskAdapter.setSelectionMode(false);
+        bulkActionBar.setVisibility(View.GONE);
+        fabAddTask.setImageResource(android.R.drawable.ic_input_add);
+    }
+
+    private void updateSelectedCount() {
+        int count = taskAdapter.getSelectedCount();
+        textSelectedCount.setText(getString(R.string.bulk_selected_count, count));
+    }
+
+    @Override
+    public void onTaskLongClick(Task task, int position) {
+        if (!isSelectionMode) {
+            enterSelectionMode(task);
+        }
+    }
+
+    private void bulkCompleteSelected() {
+        List<Task> selected = taskAdapter.getSelectedTasks();
+        if (selected.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.no_items_selected, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final int count = selected.size();
+        executor.execute(() -> {
+            for (Task task : selected) {
+                AppDatabase.getInstance(requireContext())
+                        .taskDao().markCompleteWithTimestamp(task.getId(), System.currentTimeMillis());
+                ReminderScheduler.cancelReminder(requireContext(), task.getId());
+            }
+            BadgeUtils.updateBadgeCount(requireContext());
+            TaskWidgetProvider.refreshWidget(requireContext());
+
+            if (getActivity() != null) {
+                getActivity().runOnUiThread(() -> {
+                    exitSelectionMode();
+                    loadTasks();
+                    Snackbar.make(requireView(),
+                            getString(R.string.bulk_complete_confirm, count),
+                            Snackbar.LENGTH_LONG).setAnchorView(fabAddTask).show();
+                });
+            }
+        });
+    }
+
+    private void bulkDeleteSelected() {
+        List<Task> selected = taskAdapter.getSelectedTasks();
+        if (selected.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.no_items_selected, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        new AlertDialog.Builder(requireContext())
+                .setMessage(getString(R.string.bulk_delete_confirm, selected.size()))
+                .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                    executor.execute(() -> {
+                        for (Task task : selected) {
+                            AppDatabase.getInstance(requireContext())
+                                    .taskDao().deleteTask(task.getId());
+                            ReminderScheduler.cancelReminder(requireContext(), task.getId());
+                        }
+                        BadgeUtils.updateBadgeCount(requireContext());
+                        TaskWidgetProvider.refreshWidget(requireContext());
+
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                exitSelectionMode();
+                                loadTasks();
+                            });
+                        }
+                    });
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void bulkChangePriority() {
+        List<Task> selected = taskAdapter.getSelectedTasks();
+        if (selected.isEmpty()) {
+            Toast.makeText(requireContext(), R.string.no_items_selected, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String[] priorityOptions = {
+                getString(R.string.priority_high),
+                getString(R.string.priority_medium),
+                getString(R.string.priority_low)
+        };
+
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.bulk_change_priority)
+                .setItems(priorityOptions, (dialog, which) -> {
+                    int newPriority = which + 1; // 1=High, 2=Medium, 3=Low
+                    executor.execute(() -> {
+                        for (Task task : selected) {
+                            task.setPriority(newPriority);
+                            AppDatabase.getInstance(requireContext())
+                                    .taskDao().updateTask(task);
+                        }
+
+                        if (getActivity() != null) {
+                            getActivity().runOnUiThread(() -> {
+                                exitSelectionMode();
+                                loadTasks();
+                            });
+                        }
+                    });
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void loadTasks() {
@@ -286,6 +541,9 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         if (nextTask != null) {
                             AppDatabase.getInstance(requireContext()).taskDao().insertTask(nextTask);
                         }
+
+                        // Refresh widget to reflect completed task
+                        TaskWidgetProvider.refreshWidget(requireContext());
                     });
                 }
             }
@@ -462,6 +720,8 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         if (selectedDueDate[0] != null) {
                             ReminderScheduler.scheduleReminder(requireContext(), task);
                         }
+                        // Refresh widget to show newly created task
+                        TaskWidgetProvider.refreshWidget(requireContext());
                         if (getActivity() != null) {
                             getActivity().runOnUiThread(this::loadTasks);
                         }

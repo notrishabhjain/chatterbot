@@ -54,6 +54,22 @@ public class TaskWidgetProvider extends AppWidgetProvider {
         views.setPendingIntentTemplate(R.id.widget_list, templatePending);
 
         appWidgetManager.updateAppWidget(appWidgetId, views);
+
+        // Force data refresh after setting up the widget
+        appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widget_list);
+    }
+
+    /**
+     * Refreshes all TaskFlow widgets. Call this when task data changes
+     * (e.g., task created, completed, or updated) to keep the widget in sync.
+     */
+    public static void refreshWidget(Context context) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+        int[] ids = appWidgetManager.getAppWidgetIds(
+                new ComponentName(context, TaskWidgetProvider.class));
+        if (ids != null && ids.length > 0) {
+            appWidgetManager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list);
+        }
     }
 
     @Override

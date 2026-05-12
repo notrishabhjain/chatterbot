@@ -9,6 +9,7 @@ import android.provider.CalendarContract;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,12 +25,15 @@ import com.taskflow.automate.model.Tag;
 import com.taskflow.automate.model.Task;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
 
@@ -45,13 +49,22 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskStarToggle(Task task, int position);
     }
 
+    public interface OnTaskLongClickListener {
+        void onTaskLongClick(Task task, int position);
+    }
+
     private List<Task> tasks;
     private final OnTaskCompleteListener completeListener;
     private OnTaskClickListener clickListener;
     private OnTaskStarListener starListener;
+    private OnTaskLongClickListener longClickListener;
     private final SimpleDateFormat dateFormat;
     private Map<Long, List<Tag>> tagMap = new HashMap<>();
     private Map<Long, int[]> subtaskCountMap = new HashMap<>();
+
+    // Selection mode fields
+    private boolean selectionMode = false;
+    private Set<Long> selectedIds = new HashSet<>();
 
     public TaskAdapter(List<Task> tasks, OnTaskCompleteListener listener) {
         this.tasks = tasks;
@@ -67,12 +80,60 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         this.starListener = listener;
     }
 
+    public void setOnTaskLongClickListener(OnTaskLongClickListener listener) {
+        this.longClickListener = listener;
+    }
+
     public void setTagMap(Map<Long, List<Tag>> tagMap) {
         this.tagMap = tagMap;
     }
 
     public void setSubtaskCountMap(Map<Long, int[]> map) {
         this.subtaskCountMap = map;
+    }
+
+    // Selection mode methods
+    public void setSelectionMode(boolean enabled) {
+        this.selectionMode = enabled;
+        if (!enabled) {
+            selectedIds.clear();
+        }
+        notifyDataSetChanged();
+    }
+
+    public boolean isSelectionMode() {
+        return selectionMode;
+    }
+
+    public Set<Long> getSelectedIds() {
+        return selectedIds;
+    }
+
+    public List<Task> getSelectedTasks() {
+        List<Task> selected = new ArrayList<>();
+        for (Task task : tasks) {
+            if (selectedIds.contains(task.getId())) {
+                selected.add(task);
+            }
+        }
+        return selected;
+    }
+
+    public void selectAll() {
+        selectedIds.clear();
+        for (Task task : tasks) {
+            selectedIds.add(task.getId());
+        }
+        notifyDataSetChanged();
+    }
+
+    public void deselectAll() {
+        selectedIds.clear();
+        notifyDataSetChanged();
+    }
+
+    public int getSelectedCount() {
+        return selectedIds.size();
     }
 
     @NonNull
@@ -125,6 +186,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     class TaskViewHolder extends RecyclerView.ViewHolder {
 
         private final View priorityBar;
+        private final CheckBox checkboxSelect;
         private final TextView textTitle;
         private final TextView textDescription;
         private final TextView textSourceApp;
@@ -138,6 +200,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             priorityBar = itemView.findViewById(R.id.priority_bar);
+            checkboxSelect = itemView.findViewById(R.id.checkbox_select);
             textTitle = itemView.findViewById(R.id.text_title);
             textDescription = itemView.findViewById(R.id.text_description);
             textSourceApp = itemView.findViewById(R.id.text_source_app);
@@ -152,6 +215,32 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void bind(Task task, int position) {
             textTitle.setText(task.getTitle());
             textDescription.setText(task.getDescription());
+
+            // Handle selection mode
+            if (selectionMode) {
+                checkboxSelect.setVisibility(View.VISIBLE);
+                // Null the listener before setting checked state to prevent
+                // stale listeners from firing on recycled ViewHolders
+                checkboxSelect.setOnCheckedChangeListener(null);
+                checkboxSelect.setChecked(selectedIds.contains(task.getId()));
+                checkboxSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (isChecked) {
+                        selectedIds.add(task.getId());
+                    } else {
+                        selectedIds.remove(task.getId());
+                    }
+                });
+                // Highlight selected items
+                if (selectedIds.contains(task.getId())) {
+                    itemView.setAlpha(0.85f);
+                } else {
+                    itemView.setAlpha(1.0f);
+                }
+            } else {
+                checkboxSelect.setVisibility(View.GONE);
+                checkboxSelect.setOnCheckedChangeListener(null);
+                itemView.setAlpha(1.0f);
+            }
 
             if (task.getSourceApp() != null && !task.getSourceApp().isEmpty()) {
                 textSourceApp.setVisibility(View.VISIBLE);
@@ -238,34 +327,42 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 Intent intent = new Intent(Intent.ACTION_INSERT);
                 intent.setData(CalendarContract.Events.CONTENT_URI);
 
-                // Use description as event title if available (notification title is often sender name)
-                String eventTitle;
-                if (task.getDescription() != null && !task.getDescription().isEmpty()) {
-                    eventTitle = task.getDescription();
-                } else {
-                    eventTitle = task.getTitle();
-                }
+                // Always use task title as calendar event title
+                String eventTitle = task.getTitle() != null ? task.getTitle() : "";
                 // Truncate if too long for calendar title
                 if (eventTitle.length() > 100) {
                     eventTitle = eventTitle.substring(0, 97) + "...";
                 }
-
                 intent.putExtra(CalendarContract.Events.TITLE, eventTitle);
 
-                // Put the full context in description
-                String eventDescription = "Task: " + task.getTitle();
+                // Build a comprehensive description with all task details
+                StringBuilder descBuilder = new StringBuilder();
                 if (task.getDescription() != null && !task.getDescription().isEmpty()) {
-                    eventDescription += "\n\n" + task.getDescription();
+                    descBuilder.append(task.getDescription());
+                    descBuilder.append("\n\n");
                 }
                 if (task.getSourceApp() != null && !task.getSourceApp().isEmpty()) {
-                    eventDescription += "\n\nSource: " + task.getSourceApp();
+                    descBuilder.append("Source: ").append(task.getSourceApp()).append("\n");
                 }
-                eventDescription += "\nPriority: " + task.getPriorityLabel();
-                intent.putExtra(CalendarContract.Events.DESCRIPTION, eventDescription);
+                descBuilder.append("Priority: ").append(task.getPriorityLabel());
+                if (task.getAssignee() != null && !task.getAssignee().isEmpty()) {
+                    descBuilder.append("\nAssignee: ").append(task.getAssignee());
+                }
+                intent.putExtra(CalendarContract.Events.DESCRIPTION, descBuilder.toString());
 
-                long startTime = task.getDueDate() != null ? task.getDueDate() : System.currentTimeMillis();
+                // Set start time from due date, or current time + 1 hour if no due date
+                long startTime;
+                if (task.getDueDate() != null) {
+                    startTime = task.getDueDate();
+                } else {
+                    startTime = System.currentTimeMillis() + (60 * 60 * 1000L);
+                }
                 intent.putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, startTime);
-                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTime + 60 * 60 * 1000);
+                intent.putExtra(CalendarContract.EXTRA_EVENT_END_TIME, startTime + (60 * 60 * 1000L));
+
+                // Add a default reminder
+                intent.putExtra(CalendarContract.Events.HAS_ALARM, 1);
+
                 try {
                     context.startActivity(intent);
                 } catch (ActivityNotFoundException e) {
@@ -273,10 +370,29 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
                 }
             });
 
+            // Click handling: in selection mode, toggle selection; otherwise open detail
             itemView.setOnClickListener(v -> {
-                if (clickListener != null) {
-                    clickListener.onTaskClick(task);
+                if (selectionMode) {
+                    boolean isSelected = selectedIds.contains(task.getId());
+                    if (isSelected) {
+                        selectedIds.remove(task.getId());
+                    } else {
+                        selectedIds.add(task.getId());
+                    }
+                    notifyItemChanged(position);
+                } else {
+                    if (clickListener != null) {
+                        clickListener.onTaskClick(task);
+                    }
                 }
+            });
+
+            // Long-press to enter selection mode
+            itemView.setOnLongClickListener(v -> {
+                if (!selectionMode && longClickListener != null) {
+                    longClickListener.onTaskLongClick(task, position);
+                }
+                return true;
             });
         }
     }
