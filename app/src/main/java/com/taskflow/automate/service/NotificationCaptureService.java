@@ -24,6 +24,7 @@ import com.taskflow.automate.util.DuplicateTaskDetector;
 import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.PriorityAssigner;
 import com.taskflow.automate.util.ReminderScheduler;
+import com.taskflow.automate.util.SelfForwardDetector;
 import com.taskflow.automate.util.SmartTaskCategorizer;
 import com.taskflow.automate.util.TaskExtractor;
 import com.taskflow.automate.widget.TaskWidgetProvider;
@@ -134,6 +135,7 @@ public class NotificationCaptureService extends NotificationListenerService {
         String text = extras.getString(Notification.EXTRA_TEXT);
 
         // WhatsApp-specific: extract content from MessagingStyle EXTRA_MESSAGES
+        String whatsAppSender = null;
         if (isWhatsAppPackage(packageName)) {
             Parcelable[] messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES);
             if (messages != null && messages.length > 0) {
@@ -148,6 +150,7 @@ public class NotificationCaptureService extends NotificationListenerService {
                     }
                     if (msgSender != null && msgSender.length() > 0) {
                         title = msgSender.toString();
+                        whatsAppSender = msgSender.toString();
                     }
                 }
             }
@@ -229,20 +232,24 @@ public class NotificationCaptureService extends NotificationListenerService {
             result.taskDescription = desc + "\n" + urls;
         }
 
-        // WhatsApp self-forward detection
-        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(title)) {
+        // WhatsApp self-forward detection - use whatsAppSender (not title) to avoid
+        // matching against the group conversation title
+        if (isWhatsAppPackage(packageName) && isSelfForwardedMessage(whatsAppSender)) {
             createSelfForwardTask(result, packageName, sbn.getKey(), text);
             return;
         }
 
         // Post companion notification with "Create Task" action button
+        // When action button is enabled, let the user decide - do NOT auto-create the task
         if (preferenceManager.isTaskActionButtonEnabled()) {
             postTaskActionNotification(
                     result.taskTitle != null ? result.taskTitle : title,
                     text,
                     packageName);
+            return;
         }
 
+        // Auto-create task only when action button feature is disabled
         // Clean up old entries before dedup check
         cleanupDeduplicationMap();
 
@@ -457,16 +464,12 @@ public class NotificationCaptureService extends NotificationListenerService {
 
     /**
      * Checks if the notification sender matches the user's own WhatsApp name (self-forward).
+     * Uses the sender name from EXTRA_MESSAGES (not the conversation title) to avoid
+     * false positives in group chats.
      */
-    private boolean isSelfForwardedMessage(String senderOrTitle) {
-        if (senderOrTitle == null || senderOrTitle.isEmpty()) {
-            return false;
-        }
+    private boolean isSelfForwardedMessage(String sender) {
         String selfName = preferenceManager.getWhatsAppSelfName();
-        if (selfName == null || selfName.isEmpty()) {
-            return false;
-        }
-        return senderOrTitle.trim().equalsIgnoreCase(selfName.trim());
+        return SelfForwardDetector.isSelfForwardedMessage(sender, selfName);
     }
 
     /**

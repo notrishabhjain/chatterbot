@@ -5,7 +5,6 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-import android.widget.Toast;
 
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.model.Task;
@@ -23,6 +22,8 @@ public class NotificationTaskReceiver extends BroadcastReceiver {
     public static final String EXTRA_TASK_DESCRIPTION = "task_description";
     public static final String EXTRA_SOURCE_APP = "source_app";
     public static final String EXTRA_NOTIFICATION_ID = "notification_id";
+
+    private static final ExecutorService EXECUTOR = Executors.newSingleThreadExecutor();
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -48,8 +49,7 @@ public class NotificationTaskReceiver extends BroadcastReceiver {
         }
 
         final PendingResult pendingResult = goAsync();
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        executor.execute(() -> {
+        EXECUTOR.execute(() -> {
             try {
                 Task task = new Task();
                 task.setTitle(taskTitle);
@@ -70,6 +70,5 @@ public class NotificationTaskReceiver extends BroadcastReceiver {
                 pendingResult.finish();
             }
         });
-        executor.shutdown();
     }
 }
