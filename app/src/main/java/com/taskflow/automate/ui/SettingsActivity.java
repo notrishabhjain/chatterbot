@@ -59,6 +59,7 @@ public class SettingsActivity extends AppCompatActivity {
         setupReminderIntervals();
         setupEmailDigest();
         setupWhatsAppSettings();
+        setupWhatsAppMonitor();
         setupTaskActionButton();
     }
 
@@ -296,6 +297,50 @@ public class SettingsActivity extends AppCompatActivity {
         toggleTaskAction.setChecked(preferenceManager.isTaskActionButtonEnabled());
         toggleTaskAction.setOnCheckedChangeListener((buttonView, isChecked) -> {
             preferenceManager.setTaskActionButtonEnabled(isChecked);
+        });
+    }
+
+    private void setupWhatsAppMonitor() {
+        SwitchCompat switchMonitor = findViewById(R.id.switch_whatsapp_monitor);
+        TextInputLayout layoutMonitoredChat = findViewById(R.id.layout_whatsapp_monitored_chat);
+        TextInputEditText inputMonitoredChat = findViewById(R.id.input_whatsapp_monitored_chat);
+
+        if (switchMonitor == null || layoutMonitoredChat == null || inputMonitoredChat == null) {
+            return;
+        }
+
+        boolean enabled = preferenceManager.isWhatsAppMonitorEnabled();
+        switchMonitor.setChecked(enabled);
+        layoutMonitoredChat.setVisibility(enabled ? View.VISIBLE : View.GONE);
+
+        String savedChat = preferenceManager.getWhatsAppMonitoredChat();
+        if (savedChat != null) {
+            inputMonitoredChat.setText(savedChat);
+        }
+
+        switchMonitor.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            preferenceManager.setWhatsAppMonitorEnabled(isChecked);
+            layoutMonitoredChat.setVisibility(isChecked ? View.VISIBLE : View.GONE);
+        });
+
+        inputMonitoredChat.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String name = s.toString().trim();
+                if (!name.isEmpty()) {
+                    preferenceManager.setWhatsAppMonitoredChat(name);
+                } else {
+                    preferenceManager.setWhatsAppMonitoredChat(null);
+                }
+            }
         });
     }
 }

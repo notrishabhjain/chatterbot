@@ -211,11 +211,43 @@ public class NotificationCaptureService extends NotificationListenerService {
             return;
         }
 
+        // WhatsApp Chat Monitor: filter notifications to only process the monitored chat
+        boolean forceCreateTask = false;
+        if (isWhatsAppPackage(packageName) && preferenceManager.isWhatsAppMonitorEnabled()) {
+            String monitoredChat = preferenceManager.getWhatsAppMonitoredChat();
+            if (monitoredChat != null && !monitoredChat.isEmpty()) {
+                boolean isFromMonitoredChat = false;
+                if (title != null && title.equalsIgnoreCase(monitoredChat)) {
+                    isFromMonitoredChat = true;
+                }
+                CharSequence convTitle = extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE);
+                if (convTitle != null && convTitle.toString().equalsIgnoreCase(monitoredChat)) {
+                    isFromMonitoredChat = true;
+                }
+                if (!isFromMonitoredChat) {
+                    return;
+                }
+                // From monitored chat - force task creation (bypass keyword check)
+                forceCreateTask = true;
+            }
+        }
+
         // Extract task information
         TaskExtractor.TaskExtractionResult result = taskExtractor.extractTask(title, text, packageName);
 
-        if (!result.isActionable) {
+        if (!result.isActionable && !forceCreateTask) {
             return;
+        }
+
+        // If forced by WhatsApp monitor, ensure task fields are populated
+        if (forceCreateTask && !result.isActionable) {
+            result.isActionable = true;
+            if (result.taskTitle == null || result.taskTitle.isEmpty()) {
+                result.taskTitle = title != null ? title : "WhatsApp Task";
+            }
+            if (result.taskDescription == null || result.taskDescription.isEmpty()) {
+                result.taskDescription = text != null ? text : "";
+            }
         }
 
         // Apply enhanced description if richer than original

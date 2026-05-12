@@ -218,4 +218,11 @@
     <string name="self_forward_detected">Self-forward task created</string>
     <string name="task_action_button_label">Show Task Action on Notifications</string>
     <string name="add_as_task_title">Add as Task?</string>
+
+    <!-- WhatsApp Chat Monitor -->
+    <string name="whatsapp_monitor_header">WhatsApp Chat Monitor</string>
+    <string name="whatsapp_monitor_enable_label">Enable Chat Monitor</string>
+    <string name="whatsapp_monitored_chat_label">Monitored Chat</string>
+    <string name="whatsapp_monitored_chat_hint">Enter exact contact or group name</string>
+    <string name="whatsapp_monitor_description">Messages from the selected chat will automatically create tasks. Enter the name exactly as it appears in your WhatsApp notifications.</string>
 </resources>

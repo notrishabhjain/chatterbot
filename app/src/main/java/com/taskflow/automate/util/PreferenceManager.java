@@ -26,6 +26,8 @@ public class PreferenceManager {
     private static final String KEY_QUICK_ADD_ENABLED = "quick_add_enabled";
     private static final String KEY_WHATSAPP_SELF_NAME = "whatsapp_self_name";
     private static final String KEY_SHOW_TASK_ACTION_BUTTON = "show_task_action_button";
+    private static final String KEY_WHATSAPP_MONITOR_ENABLED = "whatsapp_monitor_enabled";
+    private static final String KEY_WHATSAPP_MONITORED_CHAT = "whatsapp_monitored_chat";
 
     private static final int DEFAULT_HIGH_INTERVAL = 30;
     private static final int DEFAULT_MEDIUM_INTERVAL = 60;
@@ -173,5 +175,22 @@ public class PreferenceManager {
 
     public void setTaskActionButtonEnabled(boolean enabled) {
         prefs.edit().putBoolean(KEY_SHOW_TASK_ACTION_BUTTON, enabled).apply();
+    }
+
+    // WhatsApp Chat Monitor
+    public boolean isWhatsAppMonitorEnabled() {
+        return prefs.getBoolean(KEY_WHATSAPP_MONITOR_ENABLED, false);
+    }
+
+    public void setWhatsAppMonitorEnabled(boolean enabled) {
+        prefs.edit().putBoolean(KEY_WHATSAPP_MONITOR_ENABLED, enabled).apply();
+    }
+
+    public String getWhatsAppMonitoredChat() {
+        return prefs.getString(KEY_WHATSAPP_MONITORED_CHAT, null);
+    }
+
+    public void setWhatsAppMonitoredChat(String chatName) {
+        prefs.edit().putString(KEY_WHATSAPP_MONITORED_CHAT, chatName).apply();
     }
 }
