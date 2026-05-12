@@ -9,8 +9,11 @@ import android.util.Log;
 import com.taskflow.automate.database.AppDatabase;
 import com.taskflow.automate.model.Task;
 import com.taskflow.automate.util.BadgeUtils;
+import com.taskflow.automate.util.KeywordLearner;
+import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.widget.TaskWidgetProvider;
 
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -62,6 +65,12 @@ public class NotificationTaskReceiver extends BroadcastReceiver {
                 AppDatabase.getInstance(context).taskDao().insertTask(task);
                 BadgeUtils.updateBadgeCount(context);
                 TaskWidgetProvider.refreshWidget(context);
+
+                // Learn keywords from accepted notification tasks
+                Set<String> keywords = KeywordLearner.extractKeywords(taskTitle, taskDescription);
+                if (!keywords.isEmpty()) {
+                    new PreferenceManager(context).addLearnedKeywords(keywords);
+                }
 
                 Log.d(TAG, "Task created from notification action: " + taskTitle);
             } catch (Exception e) {

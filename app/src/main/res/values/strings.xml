@@ -216,8 +216,11 @@
     <string name="task_action_channel_name">Task Action Buttons</string>
     <string name="task_action_channel_description">Shows Create Task buttons on captured notifications</string>
     <string name="self_forward_detected">Self-forward task created</string>
-    <string name="task_action_button_label">Show Task Action on Notifications</string>
+    <string name="task_action_button_label">Require approval before creating tasks</string>
     <string name="add_as_task_title">Add as Task?</string>
+
+    <!-- Notification Approval Description -->
+    <string name="notification_approval_description">When enabled, captured notifications show Create Task and Dismiss buttons instead of automatically creating tasks</string>
 
     <!-- WhatsApp Chat Monitor -->
     <string name="whatsapp_monitor_header">WhatsApp Chat Monitor</string>
