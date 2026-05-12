@@ -28,6 +28,7 @@ public class PreferenceManager {
     private static final String KEY_SHOW_TASK_ACTION_BUTTON = "show_task_action_button";
     private static final String KEY_WHATSAPP_MONITOR_ENABLED = "whatsapp_monitor_enabled";
     private static final String KEY_WHATSAPP_MONITORED_CHAT = "whatsapp_monitored_chat";
+    private static final String KEY_LEARNED_KEYWORDS = "learned_keywords";
 
     private static final int DEFAULT_HIGH_INTERVAL = 30;
     private static final int DEFAULT_MEDIUM_INTERVAL = 60;
@@ -192,5 +193,20 @@ public class PreferenceManager {
 
     public void setWhatsAppMonitoredChat(String chatName) {
         prefs.edit().putString(KEY_WHATSAPP_MONITORED_CHAT, chatName).apply();
+    }
+
+    // Adaptive Keyword Learning
+    public Set<String> getLearnedKeywords() {
+        return new HashSet<>(prefs.getStringSet(KEY_LEARNED_KEYWORDS, new HashSet<>()));
+    }
+
+    public void addLearnedKeywords(Set<String> keywords) {
+        Set<String> existing = getLearnedKeywords();
+        existing.addAll(keywords);
+        prefs.edit().putStringSet(KEY_LEARNED_KEYWORDS, existing).apply();
+    }
+
+    public void clearLearnedKeywords() {
+        prefs.edit().remove(KEY_LEARNED_KEYWORDS).apply();
     }
 }

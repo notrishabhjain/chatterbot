@@ -123,20 +123,19 @@ public class SettingsActivity extends AppCompatActivity {
         PackageManager pm = getPackageManager();
         List<ApplicationInfo> allApps = pm.getInstalledApplications(PackageManager.GET_META_DATA);
 
-        // Filter to user-installed apps + common messaging/productivity apps
+        // Filter to all user-visible apps (launcher intent), user-installed, or updated system apps
         List<ApplicationInfo> relevantApps = new ArrayList<>();
         for (ApplicationInfo appInfo : allApps) {
-            // Include if it's a user-installed app (not pure system)
-            // OR if it has a launcher intent (user-visible app)
-            boolean isUserApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0;
-            boolean hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null;
-
             // Skip our own app
             if ("com.taskflow.automate".equals(appInfo.packageName)) {
                 continue;
             }
 
-            if (isUserApp || hasLauncher) {
+            boolean isUserApp = (appInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0;
+            boolean isUpdatedSystemApp = (appInfo.flags & ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0;
+            boolean hasLauncher = pm.getLaunchIntentForPackage(appInfo.packageName) != null;
+
+            if (hasLauncher || isUserApp || isUpdatedSystemApp) {
                 relevantApps.add(appInfo);
             }
         }

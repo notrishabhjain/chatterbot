@@ -92,6 +92,12 @@ public class NotificationCaptureService extends NotificationListenerService {
         duplicateDetector = new DuplicateTaskDetector();
         preferenceManager = new PreferenceManager(this);
         executorService = Executors.newSingleThreadExecutor();
+
+        // Load learned keywords from preferences
+        Set<String> learnedKeywords = preferenceManager.getLearnedKeywords();
+        if (!learnedKeywords.isEmpty()) {
+            taskExtractor.setAdditionalKeywords(learnedKeywords);
+        }
     }
 
     @Override

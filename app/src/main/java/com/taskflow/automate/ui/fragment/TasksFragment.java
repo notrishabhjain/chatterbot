@@ -37,6 +37,8 @@ import com.taskflow.automate.ui.SwipeCallback;
 import com.taskflow.automate.ui.TaskAdapter;
 import com.taskflow.automate.ui.TaskEditActivity;
 import com.taskflow.automate.util.BadgeUtils;
+import com.taskflow.automate.util.KeywordLearner;
+import com.taskflow.automate.util.PreferenceManager;
 import com.taskflow.automate.util.RecurringTaskManager;
 import com.taskflow.automate.util.ReminderScheduler;
 import com.taskflow.automate.widget.TaskWidgetProvider;
@@ -49,6 +51,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -777,6 +780,13 @@ public class TasksFragment extends Fragment implements TaskAdapter.OnTaskComplet
                         if (selectedDueDate[0] != null) {
                             ReminderScheduler.scheduleReminder(appContext, task);
                         }
+
+                        // Learn keywords from manually added tasks
+                        Set<String> keywords = KeywordLearner.extractKeywords(title, description);
+                        if (!keywords.isEmpty()) {
+                            new PreferenceManager(appContext).addLearnedKeywords(keywords);
+                        }
+
                         // Refresh widget to show newly created task
                         TaskWidgetProvider.refreshWidget(appContext);
                         if (getActivity() != null) {
