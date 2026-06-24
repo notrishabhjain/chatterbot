@@ -2,7 +2,7 @@ package com.digitaltwin.assistant.data.repository
 
 import com.digitaltwin.assistant.ai.ExtractionCandidate
 import com.digitaltwin.assistant.ai.ExtractionContext
-import com.digitaltwin.assistant.ai.RuleBasedExtractor
+import com.digitaltwin.assistant.ai.TaskExtractor
 import com.digitaltwin.assistant.data.local.dao.CaptureDao
 import com.digitaltwin.assistant.data.local.entity.CallRecord
 import com.digitaltwin.assistant.data.local.entity.CapturedNotification
@@ -16,7 +16,7 @@ import javax.inject.Singleton
 class CaptureRepository @Inject constructor(
     private val captureDao: CaptureDao,
     private val workItemRepository: WorkItemRepository,
-    private val ruleBasedExtractor: RuleBasedExtractor,
+    private val extractor: TaskExtractor,
     private val contactClassifier: ContactClassifier,
 ) {
 
@@ -44,7 +44,7 @@ class CaptureRepository @Inject constructor(
 
             val source = sourceForPackage(n.appPackage)
             val context = ExtractionContext(source = source, contact = n.title)
-            val candidates = ruleBasedExtractor.extract(text, context)
+            val candidates = extractor.extract(text, context)
 
             var workItemId: Long? = null
             if (candidates.isNotEmpty()) {

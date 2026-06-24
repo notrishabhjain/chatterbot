@@ -5,7 +5,7 @@ import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.digitaltwin.assistant.ai.ExtractionContext
-import com.digitaltwin.assistant.ai.RuleBasedExtractor
+import com.digitaltwin.assistant.ai.TaskExtractor
 import com.digitaltwin.assistant.ai.TranscriptionResult
 import com.digitaltwin.assistant.ai.Transcriber
 import com.digitaltwin.assistant.data.local.entity.CallRecord
@@ -29,7 +29,7 @@ class CallRecordingWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val captureRepository: CaptureRepository,
     private val transcriber: Transcriber,
-    private val ruleBasedExtractor: RuleBasedExtractor,
+    private val extractor: TaskExtractor,
     private val settings: SettingsStore,
 ) : CoroutineWorker(context, params) {
 
@@ -78,7 +78,7 @@ class CallRecordingWorker @AssistedInject constructor(
                     contact = storedRecord.contactName,
                     userName = settings.userName,
                 )
-                val candidates = ruleBasedExtractor.extract(transcript, ctx)
+                val candidates = extractor.extract(transcript, ctx)
                 captureRepository.updateCallRecord(storedRecord.copy(transcript = transcript))
                 captureRepository.processCallRecord(storedRecord, candidates)
                 Result.success()

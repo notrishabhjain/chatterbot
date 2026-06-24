@@ -1,7 +1,10 @@
 package com.digitaltwin.assistant.di
 
+import com.digitaltwin.assistant.ai.GeminiApi
 import com.digitaltwin.assistant.ai.GroqApi
 import com.digitaltwin.assistant.ai.GroqTranscriber
+import com.digitaltwin.assistant.ai.HybridExtractor
+import com.digitaltwin.assistant.ai.TaskExtractor
 import com.digitaltwin.assistant.ai.Transcriber
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
@@ -23,6 +26,10 @@ abstract class NetworkModule {
     @Binds
     @Singleton
     abstract fun bindTranscriber(impl: GroqTranscriber): Transcriber
+
+    @Binds
+    @Singleton
+    abstract fun bindTaskExtractor(impl: HybridExtractor): TaskExtractor
 
     companion object {
         @Provides
@@ -50,5 +57,15 @@ abstract class NetworkModule {
                 .addConverterFactory(MoshiConverterFactory.create(moshi))
                 .build()
                 .create(GroqApi::class.java)
+
+        @Provides
+        @Singleton
+        fun provideGeminiApi(client: OkHttpClient, moshi: Moshi): GeminiApi =
+            Retrofit.Builder()
+                .baseUrl(GeminiApi.BASE_URL)
+                .client(client)
+                .addConverterFactory(MoshiConverterFactory.create(moshi))
+                .build()
+                .create(GeminiApi::class.java)
     }
 }
