@@ -7,6 +7,7 @@ import android.os.Build
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.WorkManager
+import com.digitaltwin.assistant.workers.DailyBriefingWorker
 import com.digitaltwin.assistant.workers.NotificationProcessingWorker
 import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
@@ -26,6 +27,7 @@ class TwinApplication : Application(), Configuration.Provider {
         super.onCreate()
         createNotificationChannels()
         NotificationProcessingWorker.enqueueRecurring(workManager)
+        DailyBriefingWorker.enqueueAt8Am(workManager)
     }
 
     private fun createNotificationChannels() {
