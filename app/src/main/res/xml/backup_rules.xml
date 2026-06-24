@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- The Room database is the source of truth; everything else is re-derivable. -->
+    <include domain="database" path="twin.db" />
+    <exclude domain="sharedpref" path="twin_secrets.xml" />
+</full-backup-content>
